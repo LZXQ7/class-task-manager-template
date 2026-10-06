@@ -149,4 +149,4 @@ Click "Compile" in DevTools, then preview on a real device. On first use, join a
 
 ## License
 
-MIT. Free to use for learning / derivative work; please keep the original author attribution.
+MIT
