@@ -147,7 +147,7 @@ const TIMETABLE_CLASS_ID = 3;             // ← 内置示例课表对应的 cla
 
 ---
 
-## 许可
+## License
 
 MIT。可自由用于学习 / 二次开发，请保留原作者署名。
 
