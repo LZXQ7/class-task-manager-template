@@ -150,11 +150,3 @@ Click "Compile" in DevTools, then preview on a real device. On first use, join a
 ## License
 
 MIT. Free to use for learning / derivative work; please keep the original author attribution.
-
----
-
-## About this repo's sync (author only)
-
-This repo is synced by the author's local script `sync-to-github.js` from a private source project: it copies `miniprogram/` + `cloudfunctions/`, sanitizes secrets (envId / AppID / cloud storage / class codes / teacher names), then commits and pushes. **Normal users do not need this script** — just fork / clone and fill in your own config per the steps above.
-
-> Note: `.github_token` and `sync-to-github.js` are excluded by `.gitignore` and never enter any commit.

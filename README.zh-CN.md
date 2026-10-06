@@ -150,11 +150,3 @@ const TIMETABLE_CLASS_ID = 3;             // ← 内置示例课表对应的 cla
 ## License
 
 MIT。可自由用于学习 / 二次开发，请保留原作者署名。
-
----
-
-## 关于本仓库的同步（仅原作者）
-
-本仓库由作者本地脚本 `sync-to-github.js` 从私有源项目脱敏后同步：自动拷贝 `miniprogram/` + `cloudfunctions/`、替换敏感值（envId / AppID / 云存储 / 班级 / 教师姓名）、提交并推送。**普通使用者无需此脚本**，直接 fork / clone 后按上面步骤填自己的配置即可。
-
-> 注意：`.github_token` 与 `sync-to-github.js` 已被 `.gitignore` 排除，不会进入任何提交。
