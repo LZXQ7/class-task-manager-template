@@ -1,0 +1,10 @@
+{
+  "name": "course",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "mysql2": "^3.11.0",
+    "wx-server-sdk": "~2.6.3",
+    "xlsx": "^0.18.5"
+  }
+}

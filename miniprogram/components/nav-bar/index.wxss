@@ -1,0 +1,96 @@
+/* 导航条 = 玻璃材质（v0.7.17）：
+   底色由 `bg` 属性（inline style）给，模糊 / 亮边 / 底部高光在这里给。
+   导航是 fixed 的，正文会从它下面滚过 —— 这正是玻璃最容易「显形」的位置。 */
+.nav {
+  width: 100%;
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: inset 0 -1rpx 0 rgba(255, 255, 255, 0.6);
+}
+/* 不支持模糊的机型：底色不足以撑住文字（半透明白 + 无模糊 = 正文透上来）→ 加厚 */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .nav { background: rgba(255, 255, 255, 0.92) !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .nav {
+    background: #FFFFFF !important;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+.nav-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 800;
+}
+.nav-border {
+  border-bottom: 2rpx solid rgba(229,230,235,0.7);
+}
+.nav-status {
+  width: 100%;
+}
+/* 固定导航的占位块：高度 = 状态栏(px) + 标题行 88rpx，与 .nav-body 严格对齐 */
+.nav-placeholder {
+  box-sizing: content-box;
+  height: 88rpx;
+  width: 100%;
+}
+.nav-body {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16rpx;
+}
+.nav-side {
+  position: relative;
+  z-index: 2;
+  min-width: 120rpx;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.nav-left {
+  justify-content: flex-start;
+}
+.nav-right {
+  justify-content: flex-end;
+}
+.nav-btn {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* 标题绝对居中，不受左右插槽宽度影响（与微信原生导航一致） */
+.nav-title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  /* 左右各留 190rpx：右侧插槽 + 胶囊避让区不会压到标题文字 */
+  padding: 0 190rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 34rpx;
+  line-height: 48rpx;
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.nav-title .nav-title-t {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

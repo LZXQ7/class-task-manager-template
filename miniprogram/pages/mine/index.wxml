@@ -1,0 +1,298 @@
+<!-- 防滚动穿透（v0.7.9）：弹层里的 scroll-view 滑到下沿后，touchmove 会继续冒泡给 page，
+     「在弹层里滑到底 → 后面的页面跟着一起滑」就是这么来的。
+     page-meta 的 page-style 是官方/社区验证的锁页面滚动方案（Vant Weapp 的 popup 同款）。
+     ⚠️ 新增 / 改名的弹层 show 标志必须同步进下面表达式，否则 scripts/check-scroll-lock.js 会报错。 -->
+<page-meta page-style="{{(appShow || aboutShow || anncShow || aiShow || dutyListShow) ? 'overflow:hidden' : ''}}"></page-meta>
+
+<view class="page mn {{paReady ? (animSeq === 0 ? 'pa-first' : (animSeq === 1 ? 'pa-lite-a' : 'pa-lite-b')) : 'pa-hold'}}">
+
+  <!-- NavBar（fixed 默认开）：移出 spring-scroll，否则被 .ss-content 的 transform 建立包含块、固定定位失效（v0.7.19 修） -->
+  <nav-bar title="我的" />
+
+  <!-- 「切换测试账号」模拟态护栏（v1.0.5）：必须在 spring-scroll 之外，
+       否则被 .ss-content 的 transform 建立包含块，且会跟着内容一起滚走。 -->
+  <notice-bar
+    wx:if="{{impersonateBanner}}"
+    type="danger"
+    icon="info"
+    text="{{impersonateBanner}}"
+    btnText="恢复本人"
+    bind:action="onRecoverSelf"
+  />
+
+
+  <!-- 主内容滚动（v0.7.19 需求④）：spring-scroll 提供边界阻尼回弹；flex:1 填满导航栏以下区域 -->
+  <spring-scroll style="display:block;flex:1;min-height:0" class="mn-scroll" id="mineMain" bindrefresh="onRefresh">
+
+  <!-- 用户信息 -->
+  <view class="mn-user st-item st-1">
+    <!-- 点头像 → 微信官方选头像面板（chooseAvatar；getUserProfile 已被微信回收，只能拿灰头像）。
+         button 仅作透明点击层绝对铺在头像上：视觉归 avatar-tag，样式与 button 默认值完全隔离。 -->
+    <view class="avatar-wrap">
+      <avatar-tag name="{{profile ? profile.name : '我'}}" src="{{profile ? profile.avatarUrl : ''}}" size="{{80}}" />
+      <button class="avatar-btn" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar"></button>
+    </view>
+    <view class="mn-user-info">
+      <view class="mn-user-line">
+        <text class="mn-user-name">{{profile ? profile.name : '未绑定'}}</text>
+        <view wx:if="{{profile}}" class="mn-bind">已绑定</view>
+      </view>
+      <text class="mn-user-sub">
+        {{profile ? (profile.groupTag === 'X' ? '辅导员' : profile.studentNoMasked + ' · ' + profile.groupTag + ' 组') : '绑定后可查看班级值日'}}
+      </text>
+    </view>
+    <!-- 职位头衔（超管金 / 班委蓝 / 辅导员青，明显阶级区分）：来自 profile.position -->
+    <view wx:if="{{selfTag}}" class="mn-admin {{selfTier}}">{{selfTag}}</view>
+  </view>
+
+  <!-- 统计（v0.7.17 需求⑤）：辅导员不参与值日，「本学期 / 待值日 / 已结束」对他全是 0，
+       留着只是噪声。整块对辅导员不渲染。 -->
+  <view wx:if="{{stats && !isCounselor}}" class="mn-stat card st-item st-2">
+    <view class="mn-stat-cell">
+      <text class="mn-num">{{stats.termCount}}</text>
+      <text class="mn-label">本学期</text>
+    </view>
+    <view class="mn-stat-cell tappable" bindtap="onShowDutyList" data-type="pending" hover-class="tap-hover" hover-start-time="0" hover-stay-time="60">
+      <text class="mn-num {{stats.pendingCount > 0 ? 'warn' : ''}}">{{stats.pendingCount}}</text>
+      <text class="mn-label">待值日</text>
+      <view class="mn-stat-go">›</view>
+    </view>
+    <view class="mn-stat-cell tappable" bindtap="onShowDutyList" data-type="past" hover-class="tap-hover" hover-start-time="0" hover-stay-time="60">
+      <text class="mn-num">{{stats.expiredCount}}</text>
+      <text class="mn-label">已结束</text>
+      <view class="mn-stat-go">›</view>
+    </view>
+  </view>
+
+  <!-- 提醒（整块都是「学生自己的值日」相关 → 辅导员不渲染，避免留一个空卡片） -->
+  <view wx:if="{{!isCounselor}}" class="card mn-card st-item st-3">
+    <view class="mn-row" hover-class="tap-hover" hover-start-time="0" hover-stay-time="60" bindtap="onCalendar">
+      <app-icon name="calendar" variant="brand" size="{{40}}" />
+      <text class="mn-row-text">添加值日到系统日历</text>
+      <text wx:if="{{calendarOn}}" class="mn-row-done">已添加</text>
+      <view wx:else class="mn-mini-btn" catchtap="onCalendar">添加</view>
+    </view>
+    <!-- 值日微信提醒（v0.7.15）：
+         一天两条 —— 值日前一晚 21:00 预告 + 当天早上 07:00 再提醒（含课次与教室），
+         而一次性订阅是「同意一次 = 1 条额度」→ **开启之后每一次点击主行都是再攒 1 条**。
+         用户勾了弹窗里的「总是保持以上选择，不再询问」后不再弹窗、静默累积，连点几下即可攒够。
+         ⚠️ 「测试」必须独立成一行：发测试会**消耗** 1 条额度，不能挂在主点击上。 -->
+    <view class="mn-row" hover-class="tap-hover" hover-start-time="0" hover-stay-time="60" bindtap="onRemind">
+      <app-icon name="bell" variant="{{remindBlock ? 'orange' : 'brand'}}" size="{{40}}" />
+      <text class="mn-row-text">值日微信提醒</text>
+      <text wx:if="{{remindBlock}}" class="mn-row-done mn-row-warn">额度已用完 · 点此重新开启</text>
+      <text wx:elif="{{remindOn}}" class="mn-row-done">已开启 · 点此攒额度</text>
+      <view wx:else class="mn-mini-btn" catchtap="onRemind">开启</view>
+    </view>
+    <view wx:if="{{remindOn}}" class="mn-row" hover-class="tap-hover" hover-start-time="0" hover-stay-time="60" bindtap="onTestRemind">
+      <app-icon name="refresh" variant="brand" size="{{40}}" />
+      <text class="mn-row-text">测试微信提醒</text>
+      <app-icon name="arrow-right" variant="gray" size="{{32}}" />
+    </view>
+  </view>
+
+  <!-- 通知入口（v0.7.22 需求④）：只保留首页一处，「我的」页不再有通知栏
+       （角标 / 列表缓存的拉取也随之下线，缓存由首页继续写入） -->
+
+  <!-- 管理 -->
+  <view wx:if="{{isAdmin || switched}}" class="card mn-card st-item st-4">
+    <!-- 切换测试账号（仅超管）：一键换到测试身份验证不同角色视角。
+         模拟态下的「恢复本人」不再放这里 —— 已由顶部红色护栏条统一承担（v1.0.5），
+         本行在模拟态下也保留，方便连续切到另一个测试视角（后端按 realMember 鉴权，随时可切）。 -->
+    <view wx:if="{{isSuper}}" class="mn-row" hover-class="tap-hover" hover-start-time="0" hover-stay-time="60" bindtap="onSwitchAccount">
+      <app-icon name="people" variant="brand" size="{{40}}" />
+      <text class="mn-row-text">切换测试账号</text>
+      <app-icon name="arrow-right" variant="gray" size="{{32}}" />
+    </view>
+    <!-- 换班确认权在生活委员：成员提交的申请都在这里拍板 -->
+    <view wx:if="{{isSuper}}" class="mn-row" hover-class="tap-hover" hover-start-time="0" hover-stay-time="60" bindtap="openApps">
+      <app-icon name="bell" variant="brand" size="{{40}}" />
+      <text class="mn-row-text">换班待确认</text>
+      <view wx:if="{{pendingCount}}" class="mn-badge">{{pendingCount}}</view>
+      <app-icon name="arrow-right" variant="gray" size="{{32}}" />
+    </view>
+    <!-- 绑定入口开关（仅超管）：防爆破自动锁死或开学季统一开放时用 -->
+    <view wx:if="{{isSuper}}" class="mn-row" hover-class="tap-hover" hover-start-time="0" hover-stay-time="60" bindtap="onToggleBind">
+      <app-icon name="lock" variant="brand" size="{{40}}" />
+      <text class="mn-row-text">班级绑定入口</text>
+      <view class="mn-mini-tag {{bindOpen ? 'ok' : 'warn'}}">{{bindOpen ? '开放中' : '已关闭'}}</view>
+      <app-icon name="arrow-right" variant="gray" size="{{32}}" />
+    </view>
+    <!-- 发送更新公告（v0.7.25，仅超管）：全员主页弹窗、每人仅展示一次 -->
+    <view wx:if="{{isSuper}}" class="mn-row" hover-class="tap-hover" hover-start-time="0" hover-stay-time="60" bindtap="openAnnc">
+      <app-icon name="bell" variant="brand" size="{{40}}" />
+      <text class="mn-row-text">发送更新公告</text>
+      <app-icon name="arrow-right" variant="gray" size="{{32}}" />
+    </view>
+    <view wx:if="{{canSchedule}}" class="mn-row" hover-class="tap-hover" hover-start-time="0" hover-stay-time="60" bindtap="goManual">
+      <app-icon name="grid" variant="brand" size="{{40}}" />
+      <text class="mn-row-text">手动排班</text>
+      <view class="mn-mini-tag super">排班</view>
+      <app-icon name="arrow-right" variant="gray" size="{{32}}" />
+    </view>
+    <!-- 需求 D：自带密钥（跟随本人，不是班）。密钥只回掩码，保存即覆盖，不回显明文 -->
+    <view wx:if="{{canSchedule}}" class="mn-row" hover-class="tap-hover" hover-start-time="0" hover-stay-time="60" bindtap="openAiSetting">
+      <app-icon name="settings" variant="brand" size="{{40}}" />
+      <text class="mn-row-text">AI 排班设置</text>
+      <view wx:if="{{aiConfigured}}" class="mn-mini-tag ok">已配置</view>
+      <app-icon name="arrow-right" variant="gray" size="{{32}}" />
+    </view>
+    </view>
+
+  <!-- 关于 -->
+  <view class="card mn-card st-item st-5">
+    <view class="mn-row" hover-class="tap-hover" hover-start-time="0" hover-stay-time="60" bindtap="onAbout">
+      <app-icon name="info" variant="brand" size="{{40}}" />
+      <text class="mn-row-text">关于</text>
+      <app-icon name="arrow-right" variant="gray" size="{{32}}" />
+    </view>
+  </view>
+
+  <view class="mn-unbind-hint">如需解绑，请联系班级管理员手动处理</view>
+  <view class="mn-foot"></view>
+  </spring-scroll>
+
+  <!-- 我的申请（排班负责人这里同时是「待我确认」的处理台） -->
+  <bottom-sheet show="{{appShow}}" title="待确认" bind:close="onAppClose">
+    <!-- 排班域（需求 D：超管 | 本班生活委员）：全班待拍板的换班申请 -->
+    <block wx:if="{{canSchedule && pendingSwaps.length}}">
+      <view class="ap-sect">待我确认 · {{pendingSwaps.length}}</view>
+      <view wx:for="{{pendingSwaps}}" wx:key="swapId" class="ap-item pending">
+        <avatar-tag name="{{item.fromName}}" size="{{72}}" />
+        <view class="ap-info">
+          <view class="ap-title">{{item.fromName}} → {{item.toName || '未指定'}}</view>
+          <!-- v0.7.25：超管待确认列表跨班可见 —— 条目带班名，多班申请不再混淆 -->
+          <view class="ap-sub">{{item.className ? item.className + ' · ' : ''}}{{item.classDate}} {{item.whenText}} · {{item.courseName}}</view>
+        </view>
+        <view class="ap-actions">
+          <view class="ap-btn" data-id="{{item.swapId}}" bindtap="onPendingReject">拒绝</view>
+          <view class="ap-btn primary" data-id="{{item.swapId}}" bindtap="onPendingAgree">同意</view>
+        </view>
+      </view>
+      <view class="ap-sect">我的申请</view>
+    </block>
+
+    <block wx:if="{{apps.length}}">
+      <view wx:for="{{apps}}" wx:key="swapId" class="ap-item">
+        <avatar-tag name="{{item.direction === 'out' ? item.toName || item.fromName : item.fromName}}" size="{{72}}" />
+        <view class="ap-info">
+          <view class="ap-title">
+            {{item.type === 'LEAVE' ? '请假' : '换班'}} ·
+            {{item.classDate}} {{item.whenText}}
+            <block wx:if="{{item.type !== 'LEAVE' && item.toName}}"> → {{item.toName}}</block>
+          </view>
+          <view class="ap-sub">
+            提交于 {{item.createdAt}} · {{item.reasonText || '其他'}}
+          </view>
+        </view>
+        <view class="ap-status" style="color:{{item.statusFg || '#86909C'}};background:{{item.statusBg || '#F2F3F5'}}">
+          {{item.statusText || '已撤销'}}
+        </view>
+        <!-- 换班的确认权在生活委员：成员只能撤销自己的申请；超管在这里也能直接拍板 -->
+        <view class="ap-actions" wx:if="{{item.canAgree || item.canCancel}}">
+          <view wx:if="{{item.canAgree}}" class="ap-btn" data-id="{{item.swapId}}" bindtap="onSwapReject">拒绝</view>
+          <view wx:if="{{item.canAgree}}" class="ap-btn primary" data-id="{{item.swapId}}" bindtap="onSwapAgree">同意</view>
+          <view wx:if="{{item.canCancel}}" class="ap-btn" data-id="{{item.swapId}}" bindtap="onSwapCancel">撤销</view>
+        </view>
+      </view>
+    </block>
+    <empty-state wx:elif="{{!pendingSwaps.length}}" icon="empty-box" title="暂无申请记录" desc="需要调整值日时可在值日详情里发起" padding="{{80}}" />
+  </bottom-sheet>
+
+  <!-- 关于 P8 -->
+  <bottom-sheet show="{{aboutShow}}" title="关于" bind:close="onAboutClose">
+    <view class="ab-wrap">
+      <view class="ab-logo"><app-icon name="logo" variant="brand" size="{{96}}" /></view>
+      <view class="ab-name">班级任务管理</view>
+      <view class="ab-ver">Version {{appVersion}}</view>
+
+      <view class="ab-card">
+        <view class="ab-row" hover-class="tap-hover" hover-start-time="0" hover-stay-time="60" bindtap="onAgreement"><text>用户协议</text><app-icon name="arrow-right" variant="gray" size="{{32}}" /></view>
+        <view class="ab-row" hover-class="tap-hover" hover-start-time="0" hover-stay-time="60" bindtap="onPrivacy"><text>隐私政策</text><app-icon name="arrow-right" variant="gray" size="{{32}}" /></view>
+      </view>
+
+      <view class="ab-foot">
+        <text>本工具由宋艾霖自主运营，仅用于班级内部值日安排</text>
+        <text>数据存储于腾讯云 CloudBase（中国大陆境内）；不涉及支付与广告</text>
+        <text>信息处理方式详见《隐私政策》</text>
+      </view>
+    </view>
+  </bottom-sheet>
+
+  <!-- 发送更新公告（v0.7.25→改，仅超管）：版本号自动取 APP_VERSION、标题固定「版本更新公告」，超管只填更新内容 -->
+  <bottom-sheet show="{{anncShow}}" title="发送更新公告" bind:close="onAnncClose">
+    <view class="an-wrap">
+      <view class="an-tip">将向全员推送「版本更新公告」（v{{appVersion}}），无需手填版本号与标题。</view>
+      <view class="an-field">
+        <text class="an-label">更新内容</text>
+        <textarea class="an-textarea" value="{{anncContent}}" maxlength="2000" placeholder="一行一条，写这次更新了什么…" placeholder-class="f-ph" bindinput="onAnncContent" />
+      </view>
+      <view class="an-tip">发送后：所有人下次打开小程序时主页弹窗展示一次，看过不再弹</view>
+      <view class="an-btn {{anncBusy ? 'busy' : ''}}" bindtap="onAnncSend">{{anncBusy ? '发送中…' : '发送公告'}}</view>
+    </view>
+  </bottom-sheet>
+
+  <!-- 需求 D：AI 排班设置（自带密钥，跟随本人） -->
+  <bottom-sheet show="{{aiShow}}" title="AI 排班设置" bind:close="onAiClose">
+    <view class="an-wrap">
+      <view class="an-tip">填写你自己的大模型接口与密钥，AI 生成值日表时使用「你」的额度。密钥只存一份、不会回显，保存即覆盖。</view>
+
+      <view class="an-field">
+        <text class="an-label">常用接口预设（点一下自动填好地址与默认模型）</text>
+        <view class="an-presets">
+          <view class="an-preset {{aiProvider === 'deepseek' ? 'on' : ''}}" data-p="deepseek" bindtap="onAiPreset">DeepSeek</view>
+          <view class="an-preset {{aiProvider === 'glm' ? 'on' : ''}}" data-p="glm" bindtap="onAiPreset">智谱 GLM</view>
+          <view class="an-preset {{aiProvider === 'qwen' ? 'on' : ''}}" data-p="qwen" bindtap="onAiPreset">通义千问</view>
+        </view>
+      </view>
+
+      <view class="an-field">
+        <text class="an-label">接口地址（可留空）</text>
+        <input class="an-input" value="{{aiBaseUrl}}" placeholder="留空=官方默认 https://api.deepseek.com" placeholder-class="f-ph" bindinput="onAiBaseUrl" />
+      </view>
+      <view class="an-field">
+        <text class="an-label">模型名（可留空；填了密钥点「获取」从服务商拉列表）</text>
+        <view class="an-model-row">
+          <input class="an-input" value="{{aiModel}}" placeholder="留空=默认 deepseek-chat" placeholder-class="f-ph" bindinput="onAiModel" />
+          <view class="an-fetch {{aiBusy ? 'busy' : ''}}" bindtap="onAiFetchModels">获取</view>
+        </view>
+        <scroll-view wx:if="{{aiModels.length}}" scroll-y class="an-models-scroll">
+          <view class="an-models-hint">点击选择模型（共 {{aiModels.length}} 个）</view>
+          <view wx:for="{{aiModels}}" wx:key="*this" class="an-model {{aiModel === item ? 'on' : ''}}" data-m="{{item}}" bindtap="onPickModel">{{item}}</view>
+        </scroll-view>
+      </view>
+      <view class="an-field">
+        <text class="an-label">密钥</text>
+        <input class="an-input" password="{{true}}" value="{{aiKey}}" placeholder="{{aiKeyMask ? '已保存 ' + aiKeyMask + '，留空则不改' : 'sk-…'}}" placeholder-class="f-ph" bindinput="onAiKey" />
+      </view>
+
+      <view wx:if="{{aiConfigured && !aiKey}}" class="an-tip">当前已保存：{{aiKeyMask}}（不填密钥保存则保持原值不变）</view>
+      <view wx:if="{{aiTestResult}}" class="an-tip">{{aiTestResult}}</view>
+
+      <!-- 左右并排一行：次行动（描边）在左，主行动（实心）在右 -->
+      <view class="an-actions">
+        <view class="an-btn ghost {{aiBusy ? 'busy' : ''}}" bindtap="onAiTest">{{aiBusy ? '测试中…' : '测试连通'}}</view>
+        <view class="an-btn {{aiBusy ? 'busy' : ''}}" bindtap="onAiSave">{{aiBusy ? '保存中…' : '保存'}}</view>
+      </view>
+      <view wx:if="{{aiConfigured}}" class="an-tip" bindtap="onAiClear">清除我的密钥（清除后无法恢复，需重新填写）</view>
+    </view>
+  </bottom-sheet>
+
+  <!-- 值日明细（需求：「待值日 / 已结束」数字可点开查看具体条目；只读清单，不可点） -->
+  <bottom-sheet show="{{dutyListShow}}" title="{{dutyListTitle}}" tall bind:close="onDutyListClose">
+    <view class="dl">
+      <view wx:if="{{dutyListLoading}}" class="dl-loading">加载中…</view>
+      <view wx:elif="{{!dutyList.length}}" class="dl-empty">暂无相关值日</view>
+      <view wx:for="{{dutyList}}" wx:key="id" class="dl-item">
+        <view class="dl-date">{{item.classDate}}</view>
+        <view class="dl-info">
+          <view class="dl-line1">
+            <text class="dl-course">{{item.courseName}}</text>
+            <text class="dl-tag {{item.statusCls}}">{{item.statusText}}</text>
+          </view>
+          <view class="dl-line2">{{item.periodText}} · {{item.room || '未填教室'}}{{item.groupScope ? ' · ' + item.groupScope + ' 组' : ''}}</view>
+        </view>
+      </view>
+    </view>
+  </bottom-sheet>
+</view>

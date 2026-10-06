@@ -1,0 +1,87 @@
+/* P9 · 用户协议 / 隐私政策（非 Tab 二级页，导航固定） */
+.dc { min-height: 100vh; }
+
+.dc-head { padding: 8rpx 32rpx 20rpx; }
+.dc-name {
+  display: block;
+  font-size: 40rpx;
+  font-weight: 600;
+  color: #1D2129;
+}
+.dc-meta {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #86909C;
+}
+
+/* ---------- 导语 ---------- */
+.dc-intro {
+  margin: 0 32rpx 8rpx;
+  padding: 22rpx 24rpx;
+  background: #F0F5FF;
+  border-radius: 32rpx;
+}
+.dc-intro-text {
+  display: block;
+  font-size: 25rpx;
+  line-height: 1.8;
+  color: #3370FF;
+}
+.dc-intro-text + .dc-intro-text { margin-top: 14rpx; }
+
+/* ---------- 条文卡片 ---------- */
+.dc-sec {
+  margin: 16rpx 32rpx 24rpx;
+  padding: 28rpx 32rpx;
+  background: rgba(255, 255, 255, 0.55);
+  border: 2rpx solid #F2F3F5;
+  border-radius: 40rpx;
+}
+.dc-h {
+  display: block;
+  margin-bottom: 12rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1D2129;
+}
+.dc-p {
+  display: block;
+  margin: 8rpx 0;
+  font-size: 27rpx;
+  line-height: 1.8;
+  color: #4E5969;
+}
+
+/* ---------- 条目 ---------- */
+.dc-li {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  margin: 8rpx 0;
+}
+.dc-dot {
+  flex-shrink: 0;
+  width: 10rpx;
+  height: 10rpx;
+  margin: 18rpx 14rpx 0 4rpx;
+  border-radius: 50%;
+  background: #C9CDD4;
+}
+.dc-li-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 27rpx;
+  line-height: 1.8;
+  color: #4E5969;
+}
+
+/* ---------- 页脚 ---------- */
+.dc-foot { padding: 8rpx 32rpx calc(48rpx + env(safe-area-inset-bottom)); }
+.dc-foot-text {
+  display: block;
+  text-align: center;
+  font-size: 23rpx;
+  line-height: 1.7;
+  color: #C9CDD4;
+}

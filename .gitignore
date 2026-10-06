@@ -1,0 +1,21 @@
+# ===== 密钥 / 本地同步脚本（绝不进库） =====
+.github_token
+sync-to-github.js
+
+# ===== 依赖（云函数部署时云端安装，不提交） =====
+node_modules/
+**/node_modules/
+
+# ===== 本地私有配置 / 非框架目录 =====
+project.private.config.json
+.workbuddy/
+docs/
+scripts/
+outputs/
+CHANGELOG*
+HANDOFF.md
+
+# ===== 日志 / 系统文件 =====
+*.log
+.DS_Store
+Thumbs.db

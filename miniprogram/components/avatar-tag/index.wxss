@@ -1,0 +1,43 @@
+.avatar-tag {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  overflow: hidden;
+}
+.avatar-circle {
+  flex-shrink: 0;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+/* 微信头像图片：与色块同为圆形，加载失败由 js 回落到色块 */
+.avatar-img {
+  flex-shrink: 0;
+  border-radius: 999rpx;
+  background: #F2F3F5;
+}
+.avatar-char {
+  font-weight: 600;
+  text-align: center;
+}
+.avatar-text {
+  display: flex;
+  flex-direction: column;
+  margin-left: 12rpx;
+  min-width: 0;
+}
+.avatar-label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.avatar-sub {
+  font-size: 24rpx;
+  line-height: 32rpx;
+  color: #86909C;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

@@ -1,0 +1,358 @@
+.bind {
+  min-height: 100vh;
+  background: #FFFFFF;
+}
+
+/* ---------- Step 1 ---------- */
+.bind-status { width: 100%; }
+.bind-gap { width: 100%; }
+.bind-logo {
+  width: 176rpx;
+  height: 176rpx;
+  margin: 0 auto;
+  border-radius: 48rpx;
+  background: #F0F5FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bind-title {
+  margin-top: 32rpx;
+  text-align: center;
+  font-size: 56rpx;
+  line-height: 76rpx;
+  font-weight: 600;
+  color: #1D2129;
+}
+.bind-sub {
+  margin-top: 8rpx;
+  text-align: center;
+  font-size: 28rpx;
+  line-height: 40rpx;
+  color: #86909C;
+}
+.bind-form {
+  padding: 0 32rpx;
+  margin-top: 48rpx;
+}
+.bind-label {
+  font-size: 26rpx;
+  line-height: 36rpx;
+  color: #4E5969;
+}
+.bind-input {
+  margin-top: 16rpx;
+  height: 96rpx;
+  border-radius: 40rpx;
+  border: 2rpx solid #E5E6EB;
+  background: #FFFFFF;
+  padding: 0 24rpx;
+  font-size: 32rpx;
+  color: #1D2129;
+  text-align: center;
+  letter-spacing: 4rpx;
+}
+.bind-input.err {
+  border-color: #F53F3F;
+}
+.bind-ph {
+  color: #C9CDD4;
+  font-size: 28rpx;
+}
+.bind-help {
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  line-height: 32rpx;
+  color: #86909C;
+}
+.bind-help.center { text-align: center; }
+.bind-err {
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  line-height: 32rpx;
+  color: #F53F3F;
+}
+.bind-primary {
+  margin: 48rpx 32rpx 0;
+  height: 96rpx;
+  border-radius: 40rpx;
+  background: #3370FF;
+  color: #FFFFFF;
+  font-size: 34rpx;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bind-primary:active { background: #245BDB; }
+.bind-primary.disabled {
+  background: #F2F3F5;
+  color: #C9CDD4;
+}
+.bind-spinner {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 32rpx;
+  border: 4rpx solid rgba(255, 255, 255, 0.35);
+  border-top-color: #FFFFFF;
+  animation: bind-spin .8s linear infinite;
+}
+@keyframes bind-spin { to { transform: rotate(360deg); } }
+.bind-scan {
+  margin-top: 32rpx;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  color: #3370FF;
+  font-size: 26rpx;
+}
+/* 隐私合规勾选行（2026-09-25 审核）：主动勾选同意，不得默认即同意 */
+.bind-agreement {
+  margin-top: 64rpx;
+  display: flex;
+  justify-content: center;
+  font-size: 24rpx;
+  color: #86909C;
+}
+.agree-row {
+  display: flex;
+  align-items: center;
+}
+.agree-box {
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: 16rpx;
+  border: 2rpx solid #C9CDD4;
+  margin-right: 10rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.55);
+}
+.agree-box.on {
+  background: #D6E0FF;
+  border-color: #3370FF;
+}
+.agree-text { color: #86909C; }
+.link { color: #3370FF; }
+/* 绑定入口关闭提示条（超管手动关闭 / 防爆破自动锁死） */
+.bind-closed {
+  margin: 24rpx 48rpx 0;
+  padding: 20rpx 24rpx;
+  background: #FFF7E8;
+  color: #D46B08;
+  border-radius: 24rpx;
+  font-size: 26rpx;
+  line-height: 1.6;
+}
+.shake { animation: bind-shake .3s; }
+@keyframes bind-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8rpx); }
+  75% { transform: translateX(8rpx); }
+}
+
+/* ---------- Step 2 ---------- */
+.bind-tip {
+  padding: 16rpx 32rpx;
+  font-size: 26rpx;
+  color: #86909C;
+}
+.search-box {
+  margin: 0 32rpx 16rpx;
+  height: 80rpx;
+  border-radius: 32rpx;
+  background: #F2F3F5;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 0 24rpx;
+}
+.search-input {
+  flex: 1;
+  margin-left: 12rpx;
+  font-size: 26rpx;
+  color: #1D2129;
+}
+.roster-scroll {
+  height: calc(100vh - 320rpx);
+}
+.roster-group-title {
+  padding: 8rpx 32rpx;
+  height: 64rpx;
+  line-height: 48rpx;
+  font-size: 26rpx;
+  color: #86909C;
+  background: #F5F6F8;
+}
+.roster-row {
+  position: relative;
+  height: 128rpx;
+  padding: 0 32rpx;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  background: #FFFFFF;
+  border-bottom: 2rpx solid #F2F3F5;
+}
+.roster-row.on { background: #F0F5FF; }
+.roster-row.bound { opacity: 0.45; }
+.roster-name {
+  margin-left: 24rpx;
+  font-size: 30rpx;
+  color: #1D2129;
+}
+.roster-no {
+  position: absolute;
+  left: 132rpx;
+  top: 76rpx;
+  font-size: 24rpx;
+  color: #86909C;
+}
+.roster-row > .roster-badge,
+.roster-row > .roster-tag {
+  position: absolute;
+  right: 32rpx;
+}
+.roster-badge {
+  height: 40rpx;
+  padding: 0 16rpx;
+  border-radius: 16rpx;
+  font-size: 22rpx;
+  line-height: 40rpx;
+}
+.roster-badge.ga { background: #F0F5FF; color: #3370FF; }
+.roster-badge.gb { background: #F3F0FF; color: #7C5CFF; }
+.roster-badge.teacher { background: #E8FFFB; color: #0AA5A8; }
+.roster-tag {
+  height: 40rpx;
+  padding: 0 16rpx;
+  border-radius: 16rpx;
+  background: #F2F3F5;
+  color: #4E5969;
+  font-size: 22rpx;
+  line-height: 40rpx;
+}
+.roster-row > app-icon {
+  position: absolute;
+  right: 32rpx;
+}
+.pick-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 196rpx;
+  background: #FFFFFF;
+  border-top: 2rpx solid #F2F3F5;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 0 32rpx;
+  transform: translateY(100%);
+  transition: transform .25s ease-out;
+}
+.pick-bar.up { transform: translateY(0); }
+.pick-name {
+  margin-left: 16rpx;
+  font-size: 30rpx;
+  color: #1D2129;
+}
+.pick-name.placeholder { color: #C9CDD4; }
+.pick-btn {
+  margin-left: auto;
+  width: 240rpx;
+  height: 88rpx;
+  border-radius: 32rpx;
+  background: #3370FF;
+  color: #FFFFFF;
+  font-size: 30rpx;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pick-btn:active { background: #245BDB; }
+.pick-btn.disabled { background: #F2F3F5; color: #C9CDD4; }
+
+/* ---------- Step 3 ---------- */
+.picked-card {
+  margin: 16rpx 32rpx;
+  padding: 24rpx;
+  background: rgba(255, 255, 255, 0.55);
+  border: 2rpx solid #F2F3F5;
+  border-radius: 40rpx;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.picked-info { margin-left: 24rpx; flex: 1; min-width: 0; }
+.picked-name { font-size: 34rpx; font-weight: 600; color: #1D2129; }
+.picked-no { margin-top: 4rpx; font-size: 24rpx; color: #86909C; }
+.picked-change { color: #3370FF; font-size: 30rpx; }
+.code-title {
+  margin-top: 48rpx;
+  text-align: center;
+  font-size: 30rpx;
+  color: #1D2129;
+}
+.code-wrap {
+  position: relative;
+  margin: 32rpx auto 0;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+}
+.code-cell {
+  width: 112rpx;
+  height: 112rpx;
+  margin: 0 12rpx;
+  border-radius: 40rpx;
+  border: 2rpx solid #E5E6EB;
+  background: #FFFFFF;
+  font-size: 44rpx;
+  font-weight: 600;
+  color: #1D2129;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.code-cell.active {
+  border: 4rpx solid #3370FF;
+}
+.code-wrap.err .code-cell { border-color: #F53F3F; }
+.code-input {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 112rpx;
+  opacity: 0;
+  color: transparent;
+  caret-color: transparent;
+}
+.code-err {
+  margin-top: 24rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: #F53F3F;
+}
+
+/* ---------- 教职工绑定码入口（2026-09-26） ----------
+ * 辅导员 / 老师没有班级也没有学号，走独立的一次性绑定码。
+ * 8 位码常要口头念或手抄，所以拉开字距 + 等宽体，让字符边界一眼可辨
+ * （字符集本身也已去掉易混的 I/O/0/1，见 member 云函数 STAFF_CODE_CHARS）。 */
+.bind-input-code {
+  text-align: center;
+  letter-spacing: 8rpx;
+  font-family: Menlo, Consolas, monospace;
+}
+.bind-switch {
+  margin-top: 24rpx;
+  text-align: center;
+  font-size: 24rpx;
+  color: #86909C;
+  text-decoration: underline;
+}

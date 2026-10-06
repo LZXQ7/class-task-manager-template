@@ -1,0 +1,7 @@
+{
+  "name": "ai-proxy",
+  "version": "1.0.0",
+  "main": "index.js",
+  "description": "唯一允许访问公网大模型 API 的出口函数（不绑定 VPC）",
+  "dependencies": {}
+}

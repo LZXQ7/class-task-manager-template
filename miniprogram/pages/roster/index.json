@@ -1,0 +1,11 @@
+{
+  "navigationBarTitleText": "成员与分组",
+  "usingComponents": {
+    "nav-bar": "/components/nav-bar/index",
+    "app-icon": "/components/app-icon/index",
+    "avatar-tag": "/components/avatar-tag/index",
+    "notice-bar": "/components/notice-bar/index",
+    "bottom-sheet": "/components/bottom-sheet/index",
+    "skeleton": "/components/skeleton/index"
+  }
+}

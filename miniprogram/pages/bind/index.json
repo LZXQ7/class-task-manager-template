@@ -1,0 +1,13 @@
+{
+  "navigationStyle": "custom",
+  "backgroundColor": "#FFFFFF",
+  "usingComponents": {
+    "app-icon": "../../components/app-icon/index",
+    "nav-bar": "../../components/nav-bar/index",
+    "avatar-tag": "../../components/avatar-tag/index",
+    "empty-state": "../../components/empty-state/index",
+    "skeleton": "../../components/skeleton/index",
+    "dialog": "../../components/dialog/index",
+    "spring-scroll": "../../components/spring-scroll/index"
+  }
+}

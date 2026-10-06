@@ -1,0 +1,11 @@
+{
+  "component": true,
+  "usingComponents": {
+    "app-icon": "../app-icon/index",
+    "avatar-tag": "../avatar-tag/index",
+    "status-pill": "../status-pill/index",
+    "empty-state": "../empty-state/index",
+    "skeleton": "../skeleton/index",
+    "bottom-sheet": "../bottom-sheet/index"
+  }
+}

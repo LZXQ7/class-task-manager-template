@@ -1,0 +1,72 @@
+<page-meta page-style="{{(importShow) ? 'overflow:hidden' : ''}}"></page-meta>
+<view class="page ta {{paReady ? (animSeq === 0 ? 'pa-first' : 'pa-lite-a') : 'pa-hold'}}">
+
+  <nav-bar title="课表适配申请" show-back="{{true}}">
+    <view slot="right" class="ta-nav-right">
+      <text class="ta-nav-btn" bindtap="_load">刷新</text>
+    </view>
+  </nav-bar>
+
+  <notice-bar wx:if="{{!isSuper}}" type="danger" text="仅超级管理员可以处理课表适配申请" />
+
+  <view wx:if="{{loading}}" class="ta-loading">加载中…</view>
+
+  <empty-state
+    wx:elif="{{empty}}"
+    icon="inbox"
+    title="暂无待处理申请"
+    desc="成员在「课程表」页提交适配申请后会出现在这里"
+    btn-text="刷新"
+    bind:action="_load"
+  />
+
+  <view wx:else class="ta-list">
+    <view wx:for="{{list}}" wx:key="id" class="ta-card">
+      <view class="ta-card-head">
+        <view class="ta-class">{{item.className}}</view>
+        <view class="ta-status grp">{{item.groupScope}} 组</view>
+      </view>
+      <view class="ta-row"><text class="k">提交人</text><text class="v">{{item.memberName}}</text></view>
+      <view class="ta-row"><text class="k">文件名</text><text class="v">{{item.fileName}}</text></view>
+      <view class="ta-row"><text class="k">提交时间</text><text class="v">{{item.createdAt}}</text></view>
+      <view wx:if="{{item.summary}}" class="ta-sum">
+        {{item.summary.courseCount}} 门课 · {{item.summary.sessionCount}} 节课次
+        <text wx:if="{{item.summary.warnings.length}}" class="ta-sum-w">（有提醒）</text>
+      </view>
+      <view class="ta-actions">
+        <view class="ta-btn ghost" hover-class="press-dim" bindtap="onViewFile" data-id="{{item.id}}">查看原文件</view>
+        <view class="ta-btn ghost danger" hover-class="press-dim" bindtap="onReject" data-id="{{item.id}}">拒绝</view>
+        <view class="ta-btn primary {{importBusy ? 'off' : ''}}" hover-class="press-dim" bindtap="onAdapt" data-id="{{item.id}}">预览并适配</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 适配预览 -->
+  <bottom-sheet show="{{importShow}}" title="课表适配预览" height="{{980}}" bind:close="onImportClose">
+    <view wx:if="{{importPreview}}" class="ds-form">
+      <view class="im-stat">
+        <text class="im-num">{{importPreview.courseCount}}</text><text>门课程</text>
+        <text class="im-dot">·</text>
+        <text class="im-num">{{importPreview.sessionCount}}</text><text>节课次</text>
+      </view>
+      <view class="im-group">本次适配：<text class="im-group-v">{{importPreview.groupLabel || '全体课'}}</text></view>
+      <view wx:if="{{importPreview.warnings.length}}" class="im-warn">
+        <view class="im-warn-t">解析提醒（仍会导入，请留意）</view>
+        <view wx:for="{{importPreview.warnings}}" wx:key="*this" class="im-warn-item">{{item}}</view>
+      </view>
+      <view class="im-list-t">课程清单</view>
+      <!-- ⚠️ 同课表页：必须 scroll-view，否则清单一长就压住底部按钮（2026-10-05 真机反馈） -->
+      <scroll-view class="im-list" scroll-y enhanced show-scrollbar="{{false}}" catchtouchmove>
+        <view wx:for="{{importPreview.courses}}" wx:key="name" class="im-course">
+          <text class="im-c-name">{{item.name}}</text>
+          <text class="im-c-teacher">{{item.teacher || '—'}}</text>
+        </view>
+        <view wx:if="{{!importPreview.courses.length}}" class="im-empty">没有解析到课程</view>
+      </scroll-view>
+      <view class="f-actions">
+        <view class="im-cancel" hover-class="press-dim" bindtap="onImportClose">取消</view>
+        <view class="f-save {{importBusy ? 'off' : ''}}" bindtap="onConfirmAdapt">{{importBusy ? '导入中' : '确认适配'}}</view>
+      </view>
+    </view>
+  </bottom-sheet>
+</view>

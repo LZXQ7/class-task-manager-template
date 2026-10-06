@@ -1,0 +1,7 @@
+{
+  "name": "media",
+  "timeout": 30,
+  "permissions": {
+    "openapi": ["security.mediaCheckAsync"]
+  }
+}

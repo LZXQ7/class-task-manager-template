@@ -1,0 +1,16 @@
+<!-- mounted/active 两帧：详见 components/popup-anim.js（直接绑 show 会瞬间弹出、没有动画） -->
+<view wx:if="{{mounted}}" class="dlg-root" catchtouchmove="noop">
+  <view class="dlg-mask {{active ? 'in' : ''}}" bindtap="onMask"></view>
+  <view class="dlg-box {{active ? 'in' : ''}}">
+    <view wx:if="{{icon}}" class="dlg-icon">
+      <app-icon name="{{icon}}" variant="{{iconVariant}}" size="{{72}}" />
+    </view>
+    <view wx:if="{{title}}" class="dlg-title">{{title}}</view>
+    <view wx:if="{{content}}" class="dlg-content">{{content}}</view>
+    <slot />
+    <view class="dlg-actions">
+      <view wx:if="{{showCancel}}" class="dlg-btn dlg-cancel" bindtap="onCancel">{{cancelText}}</view>
+      <view class="dlg-btn dlg-confirm" style="color:{{confirmColor}}" bindtap="onConfirm">{{confirmText}}</view>
+    </view>
+  </view>
+</view>

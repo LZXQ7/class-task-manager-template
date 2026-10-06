@@ -1,0 +1,9 @@
+<image
+  wx:if="{{src}}"
+  class="app-icon"
+  src="{{src}}"
+  mode="aspectFit"
+  style="width:{{size}}rpx;height:{{size}}rpx"
+  binderror="onError"
+  draggable="{{false}}"
+/>

@@ -1,0 +1,72 @@
+.sk-wrap { width: 100%; }
+.sk-card {
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  margin-bottom: 24rpx;
+}
+.sk-grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+.sk-grid-item {
+  width: 220rpx;
+  margin: 0 16rpx 16rpx 0;
+  background: #FFFFFF;
+  border-radius: 24rpx;
+}
+/* day 型：日期卡（标题条 + 两行头像行）。padding 与真实 .dt-daycard 对齐，
+   避免数据回来时整块高度跳变（骨架比真内容矮/高都会「跳一下」）。 */
+.sk-day {
+  padding: 24rpx 32rpx 16rpx;
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  margin-bottom: 24rpx;
+}
+.sk-dayhead {
+  width: 46%;
+  height: 28rpx;
+  margin-bottom: 20rpx;
+  border-radius: 24rpx;
+}
+.sk-dayrow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 16rpx 0;
+}
+.sk-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 24rpx 32rpx;
+  background: #FFFFFF;
+  margin-bottom: 16rpx;
+  border-radius: 24rpx;
+}
+.sk-avatar {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sk-lines {
+  flex: 1;
+  margin-left: 24rpx;
+}
+.sk-line {
+  height: 24rpx;
+  border-radius: 24rpx;
+}
+.sk-line-1 { width: 40%; margin-bottom: 16rpx; }
+.sk-line-2 { width: 70%; }
+.sk-card, .sk-grid-item, .sk-avatar, .sk-line, .sk-dayhead {
+  background-image: linear-gradient(90deg, #F2F3F5 25%, #E5E6EB 37%, #F2F3F5 63%);
+  background-size: 400% 100%;
+  animation: sk-shimmer 1.4s ease infinite;
+}
+.sk-card, .sk-grid-item { background-color: #FFFFFF; }
+@keyframes sk-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}

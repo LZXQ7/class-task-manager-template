@@ -1,0 +1,19 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16rpx;
+  flex-shrink: 0;
+}
+.pill-md {
+  height: 40rpx;
+  padding: 0 12rpx;
+  font-size: 22rpx;
+  line-height: 40rpx;
+}
+.pill-sm {
+  height: 32rpx;
+  padding: 0 8rpx;
+  font-size: 20rpx;
+  line-height: 32rpx;
+}

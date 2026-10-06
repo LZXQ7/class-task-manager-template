@@ -1,0 +1,503 @@
+<!-- 弹层打开时锁住页面滚动：本页是页面级滚动（.dt 只有 min-height:100vh），
+     duty-sheet 里的 scroll-view 滑到底后 touchmove 会继续冒泡给 page，
+     表现就是「在值日详情里选择替补，滑到底后后面的『本周值日』跟着一起滑」。
+     page-meta 的 page-style 是官方/社区验证的锁页面滚动方案（Vant Weapp 的 popup 同款）。
+     ⚠️ 新增 / 改名的弹层 show 标志必须同步进下面表达式，否则 scripts/check-scroll-lock.js 会报错。 -->
+<page-meta page-style="{{(sheetShow || aiShow || groupShow || addShow || endedSheetShow) ? 'overflow:hidden' : ''}}"></page-meta>
+
+<!-- 左右滑动切周：手势挂在页面根节点（覆盖整页），见 utils/swipe.js。
+     弹层打开时在 onSwipeEnd 里挡掉（弹层 DOM 就在这个根节点里，touch 会冒泡上来）。 -->
+<view
+  class="page dt {{paReady ? (animSeq === 0 ? 'pa-first' : (animSeq === 1 ? 'pa-lite-a' : 'pa-lite-b')) : 'pa-hold'}}"
+  bindtouchstart="onSwipeStart"
+  bindtouchend="onSwipeEnd"
+>
+
+  <!-- NavBar（fixed 默认开）：移出 spring-scroll，否则被 .ss-content 的 transform 建立包含块、固定定位失效（v0.7.19 修） -->
+  <nav-bar title="本周值日">
+  </nav-bar>
+
+  <!-- 「切换测试账号」模拟态护栏（v1.0.5）：必须在 spring-scroll 之外，
+       否则被 .ss-content 的 transform 建立包含块，且会跟着列表一起滚走。 -->
+  <notice-bar
+    wx:if="{{impersonateBanner}}"
+    type="danger"
+    icon="info"
+    text="{{impersonateBanner}}"
+    btnText="恢复本人"
+    bind:action="onRecoverSelf"
+  />
+
+  <!-- 主内容滚动（v0.7.19 需求④）：spring-scroll 提供边界阻尼回弹，告别「大矩形」感；
+       flex:1 填满导航栏以下区域；离屏 canvas / 弹层留在 spring-scroll 之外，避免被 transform 包含块影响定位。 -->
+  <spring-scroll style="display:block;flex:1;min-height:0" class="dt-scroll" id="dsMain" bindrefresh="onRefresh">
+
+  <!-- addGlobalClass: true，外部 class 能作用到组件根节点，所以它也参与入场（st-item） -->
+  <week-switcher
+    class="st-item st-1"
+    week="{{week}}"
+    total="{{totalWeeks}}"
+    current="{{current}}"
+    term-start="{{termStart}}"
+    status-text="{{status === 'PUBLISHED' ? '已发布' : (archived ? '已归档' : '草稿')}}"
+    status-type="{{status === 'PUBLISHED' ? 'published' : (archived ? 'archived' : 'draft')}}"
+    bind:change="onWeekChange"
+  />
+
+  <view class="dt-wrap st-item st-2 dt-modebar">
+    <segmented
+      items="{{[{key:'day',text:'按日'},{key:'person',text:'按人'}]}}"
+      value="{{mode}}"
+      width="{{320}}"
+      bind:change="onMode"
+    />
+    <!-- 「已结束」（2026-10-04 需求）：本周早于今天的日子收进弹层，不再占主列表 -->
+    <view
+      wx:if="{{mode === 'day' && pastDays.length}}"
+      class="dt-ended"
+      bindtap="onEndedOpen"
+      hover-class="press-dim"
+      hover-start-time="0"
+      hover-stay-time="60"
+    >
+      <text>已结束 {{pastDays.length}} 天</text>
+      <app-icon name="arrow-right" variant="gray" size="{{26}}" />
+    </view>
+  </view>
+
+  <!-- 教职工班级筛选（v0.7.16 需求⑧）：辅导员不值日，但可逐班查看值日分配；
+       chip-motion 的 padding/font-size 过渡让邻项平滑让位；flex-wrap 支持小屏换行 -->
+  <view wx:if="{{isCounselor && dutyChips.length}}" class="dt-fchips st-item st-3">
+    <view
+      wx:for="{{dutyChips}}"
+      wx:key="id"
+      class="dt-fchip chip-motion {{viewClassId === item.id ? 'on' : ''}}"
+      data-id="{{item.id}}"
+      bindtap="onDutyClass"
+      hover-class="press-dim"
+      hover-stay-time="60"
+    >{{item.name}}</view>
+  </view>
+
+  <!-- 排班域操作区（超管 / 本班生活委员，需求 D）：放在最上面，不随列表滚动 —— 本周已有 24 条值日时排到页面底部会看不见 -->
+  <view wx:if="{{canSchedule}}" class="dt-admin st-item st-4">
+    <view class="dt-admin-btn danger" hover-class="press-dim" hover-start-time="0" hover-stay-time="60" bindtap="onClear">清空值日表</view>
+    <view class="dt-admin-btn ghost" hover-class="press-dim" hover-start-time="0" hover-stay-time="60" bindtap="onAiOpen">{{busy ? '处理中' : '一键生成'}}</view>
+    <view wx:if="{{status === 'PUBLISHED'}}" class="dt-admin-btn ghost" hover-class="press-dim" hover-start-time="0" hover-stay-time="60" bindtap="onUnpublish">撤回发布</view>
+    <view wx:else class="dt-admin-btn primary" hover-class="press-dim" hover-start-time="0" hover-stay-time="60" bindtap="onPublish">发布给全班</view>
+  </view>
+  <!-- 手动排班的入口只在「我的」页（goManual → P5），此处不再重复 -->
+  <view wx:if="{{isAdmin && !canSchedule}}" class="dt-admin-tip st-item st-5">值日表的生成、发布与调整由超级管理员或本班生活委员负责</view>
+
+  <!-- 数据区（骨架 / 空态 / 列表）：左右滑动切周时这一整块做方向性过渡，
+       class 由 utils/swipe.js 下发、样式在 app.wxss。
+       ⚠️ 别把 fixed 元素放进这个容器 —— transform 会创建包含块，fixed 后代会跟着一起位移；
+          值日详情弹层（duty-sheet）/ 合并行成员弹层（bottom-sheet）刻意留在外面，由 scripts/check-week-swipe.js 守着。 -->
+  <view class="wk-swipe {{swipeCls}}">
+  <!-- 入场动画单独套一层：wk-swipe 是切周动画的容器，两层分开才不会共用同一个 animation 属性
+       ⚠️ 档位封顶 st-7：这是第 6 块，标 st-6（第 7 块起才与第 7 块同拍） -->
+  <view class="st-item st-6">
+  <!-- 切周骨架：必须与「按日」真实版式同构（日期卡 + 2 行头像行）。
+       旧写法 type="card" rows=3 height=400 会先糊上 3 块 400rpx 的大白块 ——
+       真机上就是「切下一页闪过三个很明显的框」，高度还和真内容差一大截。 -->
+  <skeleton wx:if="{{loading}}" type="day" rows="{{2}}" />
+
+  <empty-state
+    wx:elif="{{failed}}"
+    icon="cloud-off"
+    title="数据没加载出来"
+    desc="检查网络后重试"
+    btn-text="重新加载"
+    bind:action="onReload"
+    padding="{{160}}"
+  />
+
+  <block wx:elif="{{unpublished}}">
+    <empty-state
+      icon="empty-box"
+      title="本周值日还没发布"
+      desc="生活委员发布后这里会立即更新"
+      padding="{{160}}"
+    />
+  </block>
+
+  <block wx:elif="{{!days.length}}">
+    <empty-state
+      icon="empty-box"
+      title="本周没有排班"
+      desc="还没有生成值日安排"
+      padding="{{160}}"
+    />
+  </block>
+
+  <block wx:else>
+    <!-- 未发布提示 -->
+    <view wx:if="{{status !== 'PUBLISHED'}}" class="dt-wrap">
+      <notice-bar
+        type="warning"
+        text="本周排班尚未发布，发布后全班可见"
+        btn-text="{{canSchedule ? '去发布' : ''}}"
+        bind:action="onPublish"
+      />
+    </view>
+
+    <!-- 按日 -->
+    <block wx:if="{{mode === 'day'}}">
+      <!-- 渲染源是 activeDays（本周 = 今天及以后；历史周 = 全部）。
+           早于今天的日子不在这里，收进上面的「已结束」弹层（2026-10-04 需求）。 -->
+      <view wx:for="{{activeDays}}" wx:key="date" class="dt-daycard card">
+        <view class="dt-dayhead" style="{{item.ghFlip}}">
+          <text class="dt-daytitle">{{item.weekdayText}} {{item.dateText}}</text>
+          <text class="dt-daysub">{{item.totalText}}</text>
+        </view>
+        <!-- 1.0.4.4 #27：同一节课的若干人合并成一行（双/多名牌 + 汇总 pill）；点整行打开本课次成员弹层 -->
+        <view
+          wx:for="{{item.mergedDuties}}"
+          wx:for-item="g"
+          wx:key="id"
+          class="dt-row merged {{g.isMine ? 'mine' : ''}}"
+          hover-class="tap-hover"
+          hover-start-time="0"
+          hover-stay-time="60"
+          data-id="{{g.id}}"
+          style="{{g.flip}}"
+          bindtap="onRow"
+        >
+          <view wx:if="{{g.isMine}}" class="dt-row-bar"></view>
+          <view class="dt-names">
+            <avatar-tag
+              wx:for="{{g.members}}"
+              wx:for-item="m"
+              wx:key="id"
+              name="{{m.name}}"
+              text="{{m.seqText}}"
+              no-fallback="{{true}}"
+              size="{{g.avatarSize}}"
+            />
+          </view>
+          <view class="dt-row-info">
+            <view class="dt-row-namerow">
+              <text class="dt-row-name">{{g.namesText}}</text>
+              <text wx:if="{{g.isClean}}" class="dt-clean-tag">410</text>
+            </view>
+            <text class="dt-row-sub">{{g.whenText}} · {{g.room || '未填教室'}} · {{g.courseName}}</text>
+          </view>
+          <status-pill status="{{g.status}}" />
+          <text wx:if="{{canSchedule}}" class="dt-row-edit">调整›</text>
+        </view>
+        <view class="dt-dayfoot">本日 {{item.duties.length}} 次值日</view>
+        <!-- 加值日生（v0.7.16 需求③，仅超管）：弹出本日课次 → 选人 → 挂到该课次 -->
+        <view wx:if="{{canSchedule}}" class="dt-addrow" data-date="{{item.date}}" bindtap="onAddOpen" hover-class="press-dim" hover-stay-time="60">
+          <app-icon name="plus" variant="brand" size="{{30}}" />
+          <text>加值日生</text>
+        </view>
+      </view>
+      <!-- 今天起没有安排时给一句话说明，否则「按日」会是一片空白（被折走的都在「已结束」里） -->
+      <view wx:if="{{!activeDays.length}}" class="dt-ended-empty">今天起没有值日安排{{pastDays.length ? '，过去的日子在顶部「已结束」里' : ''}}</view>
+    </block>
+
+    <!-- 按人 -->
+    <block wx:else>
+      <view class="dt-personcard card">
+        <block wx:for="{{persons}}" wx:key="memberId">
+          <view
+            class="dt-person {{item.isMine ? 'mine' : ''}}"
+            data-id="{{item.memberId}}"
+            style="{{item.ghFlip}}"
+            bindtap="onExpand"
+          >
+            <avatar-tag name="{{item.name}}" text="{{item.seqText}}" no-fallback="{{true}}" size="{{56}}" />
+            <view class="dt-row-info">
+              <text class="dt-row-name">{{item.name}}</text>
+              <!-- 「值日 / 数字 / 次」三段：数字占固定宽度居中，1 位↔2 位时「次」不跳动 -->
+              <view class="dt-row-sub"><text>{{item.groupTag}} 组 · 值日</text><text class="cnt-num">{{item.weekCount}}</text><text>次</text></view>
+            </view>
+            <view class="dt-person-count"><text>本周</text><text class="cnt-num">{{item.weekCount}}</text><text>次</text></view>
+            <view class="dt-progress">
+              <view
+                wx:for="{{item.list}}"
+                wx:for-item="z"
+                wx:for-index="zi"
+                wx:key="zi"
+                class="dt-block"
+              ></view>
+            </view>
+            <app-icon name="{{expandId === item.memberId ? 'chevron-up' : 'chevron-down'}}" variant="gray" size="{{32}}" />
+          </view>
+          <block wx:if="{{expandId === item.memberId}}">
+            <view
+              wx:for="{{item.list}}"
+              wx:for-item="z"
+              wx:key="id"
+              class="dt-row sub"
+              hover-class="tap-hover"
+              hover-start-time="0"
+              hover-stay-time="60"
+              data-id="{{z.id}}"
+              style="{{z.flip}}"
+              bindtap="onRow"
+            >
+              <avatar-tag name="{{z.name}}" text="{{z.seqText}}" no-fallback="{{true}}" size="{{64}}" />
+              <view class="dt-row-info">
+                <view class="dt-row-namerow">
+                  <text class="dt-row-name">{{z.classDate}} {{z.whenText}}</text>
+                  <text wx:if="{{z.isClean}}" class="dt-clean-tag">410</text>
+                </view>
+                <text class="dt-row-sub">{{z.courseName}} · {{z.room || '未填教室'}}</text>
+              </view>
+              <status-pill status="{{z.status}}" />
+              <text wx:if="{{canSchedule}}" class="dt-row-edit">调整›</text>
+            </view>
+          </block>
+        </block>
+      </view>
+    </block>
+
+    <view class="dt-foot"></view>
+  </block>
+  </view>
+  </view>
+
+
+  </spring-scroll>
+
+  <!-- 弹层统一放在 spring-scroll 外面：bottom-sheet/duty-sheet 根节点是 position:fixed，
+       若被包进带 transform 的 .ss-content，fixed 定位会失效并随滚动位移（v0.7.19 修） -->
+
+  <!-- 加值日生（v0.7.16 需求③，仅超管）：第一步选课次 → 第二步选人 -->
+  <bottom-sheet show="{{addShow}}" title="{{addDateText}} · 加值日生" height="{{1240}}" bind:close="onAddClose">
+    <view class="dt-add">
+      <block wx:if="{{!addSessionId}}">
+        <view class="cl-sec">选择课次</view>
+        <view
+          wx:for="{{addSessions}}"
+          wx:key="sessionId"
+          class="dt-add-sess"
+          hover-class="tap-hover"
+          hover-start-time="0"
+          hover-stay-time="60"
+          data-id="{{item.sessionId}}"
+          bindtap="onAddPickSession"
+        >
+          <view class="dt-row-info">
+            <text class="dt-row-name">{{item.whenText}}{{item.room ? ' · ' + item.room : ''}}</text>
+            <text class="dt-row-sub">{{item.courseName}}（已有 {{item.count}} 人）</text>
+          </view>
+          <app-icon name="arrow-right" variant="gray" size="{{32}}" />
+        </view>
+        <view wx:if="{{!addSessions.length}}" class="cl-staff-empty">这一天没有可安排的课次</view>
+      </block>
+
+      <block wx:else>
+        <view class="dt-add-back" bindtap="onAddBackSession" hover-class="press-dim" hover-stay-time="60">
+          <app-icon name="arrow-left" variant="brand" size="{{28}}" />
+          <text>换课次</text>
+        </view>
+        <input
+          class="cl-input dt-add-kw"
+          value="{{addKw}}"
+          placeholder="搜姓名 / 序号"
+          placeholder-class="f-ph"
+          bindinput="onAddKw"
+        />
+        <view
+          wx:for="{{addMembers}}"
+          wx:key="id"
+          class="dt-add-mem {{item.taken ? 'taken' : ''}}"
+          hover-class="{{item.taken ? '' : 'tap-hover'}}"
+          hover-start-time="0"
+          hover-stay-time="60"
+          data-id="{{item.id}}"
+          bindtap="onAddPickMember"
+        >
+          <avatar-tag name="{{item.name}}" text="{{item.seqText}}" no-fallback="{{true}}" size="{{64}}" />
+          <view class="dt-row-info">
+            <text class="dt-row-name">{{item.name}}</text>
+            <text class="dt-row-sub">{{item.groupTag}} 组</text>
+          </view>
+          <text wx:if="{{item.taken}}" class="dt-add-taken">已在该课次</text>
+        </view>
+        <view wx:if="{{!addMembers.length}}" class="cl-staff-empty">没有匹配的成员</view>
+      </block>
+    </view>
+  </bottom-sheet>
+
+  <duty-sheet
+    show="{{sheetShow}}"
+    duty-id="{{sheetDutyId}}"
+    week="{{week}}"
+    bind:close="onSheetClose"
+    bind:changed="onSheetChanged"
+  />
+
+  <!-- 合并行成员弹层（1.0.4.4 #27）：列出该节课每人一行，点某人分别操作 -->
+  <bottom-sheet show="{{groupShow}}" title="{{groupTitle}}" bind:close="onGroupClose">
+    <view class="dt-group">
+      <view
+        wx:for="{{groupMembers}}"
+        wx:key="id"
+        class="dt-group-row {{item.isMine ? 'mine' : ''}}"
+        hover-class="tap-hover"
+        hover-start-time="0"
+        hover-stay-time="60"
+        data-id="{{item.id}}"
+        bindtap="onGroupPick"
+      >
+        <avatar-tag name="{{item.name}}" text="{{item.seqText}}" no-fallback="{{true}}" size="{{56}}" />
+        <view class="dt-row-info">
+          <view class="dt-row-namerow">
+            <text class="dt-row-name">{{item.name}}</text>
+            <text wx:if="{{item.isClean}}" class="dt-clean-tag">410</text>
+          </view>
+          <text class="dt-row-sub">{{item.whenText}} · {{item.room || '未填教室'}} · {{item.courseName}}</text>
+        </view>
+        <status-pill status="{{item.status}}" />
+        <text wx:if="{{canSchedule}}" class="dt-row-edit">调整›</text>
+      </view>
+    </view>
+  </bottom-sheet>
+
+  <!-- 「已结束」弹层（2026-10-04 需求）：本周里「早于今天」的日子。
+       ⚠️ 下面这张日期卡的版式与上方「按日」主列表**故意保持一致**（同一份 mergedDuties 结构）；
+          改主列表那张卡时，这一份要跟着一起改（两处在本文件里相隔不远）。
+       不含「加值日生」——过去的日子不该再补排。 -->
+  <bottom-sheet show="{{endedSheetShow}}" title="已结束 · 本周" height="{{1240}}" bind:close="onEndedClose">
+    <view class="dt-ended-list">
+      <view wx:for="{{pastDays}}" wx:key="date" class="dt-daycard card">
+        <view class="dt-dayhead" style="{{item.ghFlip}}">
+          <text class="dt-daytitle">{{item.weekdayText}} {{item.dateText}}</text>
+          <text class="dt-daysub">{{item.totalText}}</text>
+        </view>
+        <view
+          wx:for="{{item.mergedDuties}}"
+          wx:for-item="g"
+          wx:key="id"
+          class="dt-row merged {{g.isMine ? 'mine' : ''}}"
+          hover-class="tap-hover"
+          hover-start-time="0"
+          hover-stay-time="60"
+          data-id="{{g.id}}"
+          style="{{g.flip}}"
+          bindtap="onRow"
+        >
+          <view wx:if="{{g.isMine}}" class="dt-row-bar"></view>
+          <view class="dt-names">
+            <avatar-tag
+              wx:for="{{g.members}}"
+              wx:for-item="m"
+              wx:key="id"
+              name="{{m.name}}"
+              text="{{m.seqText}}"
+              no-fallback="{{true}}"
+              size="{{g.avatarSize}}"
+            />
+          </view>
+          <view class="dt-row-info">
+            <view class="dt-row-namerow">
+              <text class="dt-row-name">{{g.namesText}}</text>
+              <text wx:if="{{g.isClean}}" class="dt-clean-tag">410</text>
+            </view>
+            <text class="dt-row-sub">{{g.whenText}} · {{g.room || '未填教室'}} · {{g.courseName}}</text>
+          </view>
+          <status-pill status="{{g.status}}" />
+          <!-- 过去的日子不给「调整›」入口：后端本就禁止改过去日期（此处也省得和主列表抢
+               check-permission-delegate 的 canSchedule 入口计数）。点整行仍可看详情。 -->
+        </view>
+        <view class="dt-dayfoot">本日 {{item.duties.length}} 次值日</view>
+      </view>
+    </view>
+  </bottom-sheet>
+
+  <!-- 一键生成 · 序号轮转 / AI（DeepSeek）自然语言排班 -->
+  <bottom-sheet show="{{aiShow}}" title="一键生成值日表" height="{{1280}}" bind:close="onAiClose">
+    <view class="ai">
+      <view class="ai-tip">
+        用一句话描述你的要求。AI 只负责理解意图（跳过谁、从哪节课开始），具体谁排到哪节课由程序按课次先后顺序取最小序号决定；分组、同一人同日不排两次、请假不排、一轮每人只排一次等硬规则也都由程序强制校验。
+      </view>
+
+      <textarea
+        class="ai-input"
+        value="{{aiText}}"
+        placeholder="例如：A 组 23 号之前全部排过了，B 组 24 号之前全部排过了；从周四第二节开始排，之前的不要动；1 号和 2 号本轮先跳过"
+        placeholder-class="f-ph"
+        maxlength="600"
+        auto-height
+        bindinput="onAiInput"
+      />
+
+
+      <view class="ai-meta">
+        <text class="ai-meta-k">模型</text>
+        <text class="ai-meta-v">{{aiModel || 'DeepSeek'}}</text>
+        <text class="ai-meta-link" bindtap="onAiDiag">自检</text>
+      </view>
+
+      <view wx:if="{{!aiHasKey}}" class="ai-nokey">
+        还没接入 DeepSeek：管理员需在云函数 ai-proxy 的环境变量里配置 DEEPSEEK_API_KEY。在那之前可以先用下面的「按序号轮转」。
+      </view>
+
+      <!-- 真实错误：不要只在 toast 里闪一下就没了，长文案看不清也不好反馈 -->
+      <view wx:if="{{aiError}}" class="ai-err">
+        <text class="ai-err-t">生成失败</text>
+        <text class="ai-err-msg">{{aiError}}</text>
+        <view class="ai-err-bar">
+          <text class="ai-err-btn" bindtap="onAiCopyDiag">复制信息</text>
+          <text class="ai-err-btn" bindtap="onAiRun">重试</text>
+        </view>
+      </view>
+
+      <!-- 自检结果 -->
+      <view wx:if="{{aiDiag}}" class="ai-diag">
+        <view class="ai-diag-row"><text class="ai-diag-k">通路</text><text class="ai-diag-v">{{aiDiag.route || '-'}}</text></view>
+        <view class="ai-diag-row"><text class="ai-diag-k">出口</text><text class="ai-diag-v">{{aiDiag.egress || '-'}}（HTTP {{aiDiag.httpStatus || 0}}）</text></view>
+        <view class="ai-diag-row"><text class="ai-diag-k">密钥</text><text class="ai-diag-v">{{aiDiag.hasKey ? '已配置' : '未配置'}}</text></view>
+        <view class="ai-diag-row"><text class="ai-diag-k">部署包含 seqOf</text><text class="ai-diag-v">{{aiDiag.hasSeqOf ? '是' : '否（需重新部署）'}}</text></view>
+        <view wx:if="{{aiDiag.reply}}" class="ai-diag-row"><text class="ai-diag-k">真实往返</text><text class="ai-diag-v">成功 {{aiDiag.probeMs}}ms → {{aiDiag.reply}}</text></view>
+        <view wx:if="{{aiDiag.error}}" class="ai-diag-row"><text class="ai-diag-k">错误</text><text class="ai-diag-v err">{{aiDiag.error}}</text></view>
+        <text class="ai-diag-copy" bindtap="onAiCopyDiag">复制自检信息</text>
+      </view>
+
+      <view class="ai-actions">
+        <view class="ai-btn ghost" bindtap="onGenerate">按序号轮转</view>
+        <view class="ai-btn primary {{aiBusy ? 'off' : ''}}" bindtap="onAiRun">{{aiBusy ? '生成中…' : 'AI 生成'}}</view>
+      </view>
+
+      <!-- 预览：确认后才会写入 -->
+      <view wx:if="{{aiPlan.length}}" class="ai-result">
+        <view class="ai-result-head">预览（{{aiPlan.length}} 个课次，确认后才会写入）</view>
+        <view wx:for="{{aiPlan}}" wx:key="sessionId" class="ai-plan-row {{item.kept ? 'kept' : ''}}">
+          <text class="ai-plan-when">{{item.dayText}} 第{{item.period}}节</text>
+          <view class="ai-plan-right">
+            <text class="ai-plan-who">{{item.namesText}}</text>
+            <text wx:if="{{item.groupScope}}" class="ai-plan-tag">{{item.groupScope}} 组</text>
+            <text wx:if="{{item.kept}}" class="ai-plan-tag keep">保持原样</text>
+          </view>
+        </view>
+
+        <!-- 保洁不进 AI 计划（避免模型把它当普通课次调动），由程序按同一序号轮转补齐，
+             这里单独列出来，否则用户会以为「没有安排打扫 410」 -->
+        <view wx:if="{{aiCleaningPlan.length}}" class="ai-clean">
+          <view class="ai-result-head">打扫 410（{{aiCleaningPlan.length}} 个课次，应用后按轮转自动生成）</view>
+          <view wx:for="{{aiCleaningPlan}}" wx:key="sessionId" class="ai-plan-row clean">
+            <text class="ai-plan-when">{{item.dayText}} {{item.whenText}}</text>
+            <view class="ai-plan-right">
+              <text class="ai-plan-who">{{item.namesText || '未排'}}</text>
+              <text class="ai-plan-tag clean">410</text>
+            </view>
+          </view>
+        </view>
+
+        <view wx:if="{{aiNotes}}" class="ai-notes">AI 说明：{{aiNotes}}</view>
+        <view wx:if="{{aiWarnings.length}}" class="ai-warn">
+          <text wx:for="{{aiWarnings}}" wx:key="*this" class="ai-warn-line">· {{item}}</text>
+        </view>
+
+        <view class="ai-actions">
+          <view class="ai-btn ghost" bindtap="onAiDiscard">放弃</view>
+          <view class="ai-btn primary {{aiBusy ? 'off' : ''}}" bindtap="onAiApply">{{aiBusy ? '写入中…' : '应用到本周'}}</view>
+        </view>
+      </view>
+    </view>
+  </bottom-sheet>
+
+</view>

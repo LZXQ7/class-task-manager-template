@@ -1,0 +1,126 @@
+/* ============ C15 · 周切换条（v0.7.20 需求③重做） ============
+ * 旧版：通底白条（`background: rgba(255,255,255,.55)`，满宽 96rpx）+ 两侧裸箭头。
+ *   问题：① 一条横贯屏幕的实色条把页面切成上下两半，是「太丑了」的主因；
+ *         ② 箭头没有可点的「形」，只有 64×64 的隐形热区 —— 用户要求「改为单独的气泡箭头」。
+ * 新版：三段悬浮件 —— 玻璃气泡箭头 ×2 + 中间日期卡。整个组件**不再有整条底色**，
+ *   直接浮在页面的极光渐变上（`.page` 是 transparent，见 app.wxss）。
+ *
+ * 材质口径（对齐 v0.7.17「冰态果冻」）：
+ *   · 表面（日期卡 / 气泡）= 半透明白 + 白描边 + **靛蓝投影**（不是中性黑 —— 观感大头）
+ *     + 顶部高光；**不用 backdrop-filter**：背后是平滑渐变，模糊没收益，
+ *     反而会连锁触发两条降级要求（check-glass.js）。
+ *   · 投影色统一 rgba(31,38,135,α)（靛蓝），与 .card / 底栏同一套深度语言。
+ *   · 圆角：气泡 38rpx（正圆）｜日期卡 **999rpx（胶囊形）** —— v0.7.22 需求③两次反馈：
+ *     28 → 40rpx 用户仍说「再圆一点」，直接拉满成半圆胶囊（卡高约 96~100rpx，
+ *     999rpx = 两端全圆，随高度自适应，不再依赖手工估档位）。
+ */
+.ws {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  /* v0.7.22 需求③：底部留白 2 → 16rpx —— 旧值让日期卡几乎贴住课表的星期行
+   * （用户原话「课程表日期和下方周一周二等中间要有间隔」）。三页共用本组件，一起受益。 */
+  padding: 10rpx 32rpx 16rpx;
+}
+/* ---------- 气泡箭头 ---------- */
+.ws-bubble {
+  flex-shrink: 0;
+  width: 76rpx;
+  height: 76rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 38rpx;
+  background: rgba(255, 255, 255, 0.52);
+  border: 1rpx solid rgba(255, 255, 255, 0.62);
+  box-shadow:
+    0 8rpx 22rpx rgba(31, 38, 135, 0.12),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.92);
+  transition: transform .18s cubic-bezier(.32, 1.2, .64, 1), opacity .18s ease;
+}
+/* 到头（第 1 周还往左 / 最后一周还往右）：气泡压暗，说明「这边没有了」 */
+.ws-bubble.off {
+  opacity: .36;
+}
+.ws-bubble-hover {
+  transform: scale(.92);
+  opacity: .72;
+}
+/* ---------- 中间日期卡 ---------- */
+.ws-card {
+  flex: 1;
+  min-width: 0;
+  margin: 0 16rpx;
+  padding: 10rpx 22rpx 12rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.42);
+  border: 1rpx solid rgba(255, 255, 255, 0.55);
+  box-shadow:
+    0 8rpx 24rpx rgba(31, 38, 135, 0.10),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.9);
+  transition: transform .18s cubic-bezier(.32, 1.2, .64, 1), opacity .18s ease;
+}
+.ws-card-hover {
+  transform: scale(.985);
+  opacity: .86;
+}
+/* 日期区间：视觉主体（旧版 30rpx 与下面的「第 N 周」几乎同重，信息没有主次） */
+.ws-range {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1D2129;
+  letter-spacing: .5rpx;
+  line-height: 1.35;
+}
+.ws-sub {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  line-height: 1.4;
+  color: #86909C;
+}
+/* 「本周」标记：圆点 + 文字同色，整体作为一个整体块（旧版只有孤零零一个蓝点） */
+.ws-now {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-left: 12rpx;
+  color: #3370FF;
+  font-weight: 500;
+}
+.ws-dot {
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 5rpx;
+  background: #3370FF;
+  margin-right: 6rpx;
+}
+/* 发布状态标签：跟在下行末尾；无状态时（课表页）整行自然居中 */
+.ws-status {
+  margin-left: 12rpx;
+  height: 34rpx;
+  padding: 0 14rpx;
+  border-radius: 12rpx;
+  font-size: 20rpx;
+  line-height: 34rpx;
+}
+.ws-status.draft { background: rgba(134, 144, 156, 0.14); color: #86909C; }
+.ws-status.published { background: rgba(0, 180, 42, 0.12); color: #00B42A; }
+.ws-status.archived { background: rgba(124, 92, 255, 0.14); color: #7C5CFF; }
+/* 系统开启「减少动态效果」：按下反馈退化为只换透明度（不做缩放） */
+@media (prefers-reduced-motion: reduce) {
+  .ws-bubble,
+  .ws-card {
+    transition: opacity .01ms;
+  }
+  .ws-bubble-hover,
+  .ws-card-hover {
+    transform: none;
+  }
+}

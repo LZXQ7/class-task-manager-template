@@ -1,0 +1,27 @@
+<view class="nav {{fixed ? 'nav-fixed' : ''}} {{border ? 'nav-border' : ''}}" style="background:{{bg}}">
+  <view class="nav-status" style="height:{{statusBarHeight}}px"></view>
+  <view class="nav-body" style="height:88rpx">
+    <view class="nav-side nav-left">
+      <view wx:if="{{showBack}}" class="nav-btn" bindtap="onBack">
+        <app-icon name="arrow-left" variant="{{color === '#FFFFFF' ? 'white' : 'gray'}}" size="{{44}}" />
+      </view>
+      <slot name="left" />
+    </view>
+    <view class="nav-title">
+      <slot name="center"></slot>
+      <text wx:if="{{title}}" class="nav-title-t" style="color:{{color}}">{{title}}</text>
+    </view>
+    <view class="nav-side nav-right" style="{{padRight ? 'padding-right:' + padRight + 'px;' : ''}}">
+      <slot name="right" />
+      <view wx:if="{{showHome}}" class="nav-btn" bindtap="onHome">
+        <app-icon name="tab-home" variant="on" size="{{44}}" />
+      </view>
+    </view>
+  </view>
+</view>
+<!-- 占位块：**只在导航固定时才需要** —— 固定时 nav 脱离文档流，正文要靠它顶下来。
+     ⚠️ 2026-09-25 修：原来只判 placeholder，于是「placeholder=true 且 fixed=false」的页面
+     （notice 通知 / bind 身份绑定）会同时得到「文档流里的 nav」+「占位块」，
+     正文被顶两倍导航高度 —— 用户报的「通知页这个提示太靠下」就是它。
+     fixed 时用 px 状态栏 + rpx 标题行，避免大屏上 88rpx≠44px 造成偏移 -->
+<view wx:if="{{placeholder && fixed}}" class="nav-placeholder" style="padding-top:{{statusBarHeight}}px"></view>

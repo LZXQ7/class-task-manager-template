@@ -1,0 +1,41 @@
+<view class="sk-wrap">
+  <block wx:if="{{type === 'grid'}}">
+    <view class="sk-grid">
+      <view wx:for="{{rows}}" wx:key="*this" class="sk-grid-item" style="height:{{height}}rpx"></view>
+    </view>
+  </block>
+  <block wx:elif="{{type === 'card'}}">
+    <view wx:for="{{rows}}" wx:key="*this" class="sk-card" style="height:{{height}}rpx"></view>
+  </block>
+  <!-- day：日期卡占位（一根标题条 + 两行「头像 + 两行文字」）。
+       与值日页「按日」的真实版式同构 —— 骨架的意义是预告内容长什么样，
+       不是先糊三块大空白上去；高度可变的巨型色块在切周时闪一下最扎眼。 -->
+  <block wx:elif="{{type === 'day'}}">
+    <view wx:for="{{rows}}" wx:key="*this" class="sk-day">
+      <view class="sk-dayhead"></view>
+      <view class="sk-dayrow">
+        <view class="sk-avatar"></view>
+        <view class="sk-lines">
+          <view class="sk-line sk-line-1"></view>
+          <view class="sk-line sk-line-2"></view>
+        </view>
+      </view>
+      <view class="sk-dayrow">
+        <view class="sk-avatar"></view>
+        <view class="sk-lines">
+          <view class="sk-line sk-line-1"></view>
+          <view class="sk-line sk-line-2"></view>
+        </view>
+      </view>
+    </view>
+  </block>
+  <block wx:else>
+    <view wx:for="{{rows}}" wx:key="*this" class="sk-row">
+      <view class="sk-avatar"></view>
+      <view class="sk-lines">
+        <view class="sk-line sk-line-1"></view>
+        <view class="sk-line sk-line-2"></view>
+      </view>
+    </view>
+  </block>
+</view>

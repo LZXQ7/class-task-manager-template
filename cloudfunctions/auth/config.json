@@ -1,0 +1,10 @@
+{
+  "name": "auth",
+  "timeout": 20,
+  "envVariables": {
+    "DB_NAME": "YOUR_CLOUDBASE_ENV_ID"
+  },
+  "permissions": {
+    "openapi": []
+  }
+}

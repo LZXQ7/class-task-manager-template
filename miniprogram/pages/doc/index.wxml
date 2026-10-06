@@ -1,0 +1,28 @@
+<view class="page dc page-fade">
+
+  <nav-bar title="{{doc.title}}" show-back="{{true}}" fixed="{{true}}" border="{{true}}" />
+
+  <view class="dc-head">
+    <text class="dc-name">{{doc.name}}</text>
+    <text class="dc-meta">版本 {{doc.version}} · 更新日期 {{doc.updated}}</text>
+  </view>
+
+  <view wx:if="{{intro.length}}" class="dc-intro">
+    <text wx:for="{{intro}}" wx:key="*this" class="dc-intro-text">{{item}}</text>
+  </view>
+
+  <view wx:for="{{groups}}" wx:key="key" class="dc-sec">
+    <text class="dc-h">{{item.title}}</text>
+    <block wx:for="{{item.blocks}}" wx:for-item="b" wx:key="k">
+      <text wx:if="{{b.kind === 'p'}}" class="dc-p">{{b.text}}</text>
+      <view wx:else class="dc-li">
+        <view class="dc-dot"></view>
+        <text class="dc-li-text">{{b.text}}</text>
+      </view>
+    </block>
+  </view>
+
+  <view class="dc-foot">
+    <text class="dc-foot-text">本文档随本小程序功能同步更新，请以本页内容为准</text>
+  </view>
+</view>

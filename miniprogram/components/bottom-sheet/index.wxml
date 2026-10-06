@@ -1,0 +1,52 @@
+<!-- mounted=节点是否在 DOM（开合都留出过渡时间）；active=是否到终态（决定 .in/.up）
+     详见 components/popup-anim.js。直接写 wx:if="{{show}}" + {{show?'in':''}} 会瞬间打开。
+     v0.7.32 拖拽：只有 .sheet-drag（grabber + 标题栏）接 touchmove —— 内容区 scroll-view
+     的滚动不会触发拖动；拖动只改 transform / opacity，不碰布局（不闪、不重排）。 -->
+<view wx:if="{{mounted}}" class="sheet-root">
+  <view class="sheet-mask {{active ? 'in' : ''}}" style="{{maskStyle}}" bindtap="onMask" catchtouchmove="noop"></view>
+  <view class="sheet-panel {{active ? 'up' : ''}} {{dragging ? 'drag' : ''}} {{tall ? 'tall' : ''}}" style="border-radius:{{radius}}rpx {{radius}}rpx 0 0;{{height ? 'height:' + height + 'rpx' : ''}};{{capStyle}};{{dragStyle}}">
+    <!-- ⚠️ `{{height …}}` 与 `{{capStyle}}` 之间**必须有 `;`**（2026-09-29 修复）：
+         漏掉会拼成 `height:1040rpxmax-height:calc(100vh - 68px);` —— 长度值非法 ⇒
+         **整条声明连同 max-height 一起被丢弃** ⇒ 面板固定高度失效、长列表无法滚动
+         （现象：手动排班「添加值日」59 人列表滚不动）。四个传 height 的弹层都踩这条。
+         守护门禁：scripts/check-inline-style-join.js -->
+    <!-- 拖动感应区（约 60px）：grabber + 整条标题栏 -->
+    <view
+      class="sheet-drag"
+      bindtouchstart="onHeadStart"
+      catchtouchmove="onHeadMove"
+      bindtouchend="onHeadEnd"
+      bindtouchcancel="onHeadEnd"
+    >
+      <view class="sheet-grab"></view>
+      <view class="sheet-head">
+        <text wx:if="{{title}}" class="sheet-title">{{title}}</text>
+        <view wx:else class="sheet-title" />
+        <view wx:if="{{showClose}}" class="sheet-close" data-nodrag="1" bindtap="onClose">
+          <app-icon name="close" variant="gray" size="{{40}}" />
+        </view>
+      </view>
+    </view>
+    <!-- v1.0.5：body 改用 spring-scroll（与 home/duty/mine 同一套弹性滚动）：
+         顶部下拉有 scaleY 拉伸 + 下拉刷新（refreshable 时），底部上拉同样阻尼回弹；
+         不再 bounces=false 硬停。max-height 由 JS 下发（未传 height 的弹层）；
+         safe-area/tabbar 留白放到内层 .sheet-body-inner，避免动 spring-scroll 的 transform。
+         手势只在 .sheet-drag（标题栏）触发模态关闭；body 内触摸归 spring-scroll，互不干扰。 -->
+    <spring-scroll
+      id="sheetScroll"
+      class="sheet-spring"
+      refreshable="{{refreshable}}"
+      bindrefresh="_onRefresh"
+      style="min-height:0{{bodyMaxH}}"
+    >
+      <view class="sheet-body-inner" style="padding-bottom:{{safeBottom + (tabbar ? tabbarPx : 0)}}px">
+        <slot />
+      </view>
+    </spring-scroll>
+    <!-- v0.7.25：底部固定操作条 —— panel 的第三个 flex 子项，不随内容滚动；
+         slot 内容属于使用方页面，事件与样式都在页面作用域 -->
+    <view wx:if="{{footer}}" class="sheet-footer">
+      <slot name="footer" />
+    </view>
+  </view>
+</view>

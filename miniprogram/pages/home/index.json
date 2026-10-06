@@ -1,0 +1,18 @@
+{
+  "navigationStyle": "custom",
+  "backgroundColor": "#F5F6F8",
+  "initialRenderingCache": "static",
+  "usingComponents": {
+    "app-icon": "../../components/app-icon/index",
+    "nav-bar": "../../components/nav-bar/index",
+    "avatar-tag": "../../components/avatar-tag/index",
+    "status-pill": "../../components/status-pill/index",
+    "empty-state": "../../components/empty-state/index",
+    "skeleton": "../../components/skeleton/index",
+    "notice-bar": "../../components/notice-bar/index",
+    "bottom-sheet": "../../components/bottom-sheet/index",
+    "segmented": "../../components/segmented/index",
+    "duty-sheet": "../../components/duty-sheet/index",
+    "spring-scroll": "../../components/spring-scroll/index"
+  }
+}

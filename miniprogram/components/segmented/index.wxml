@@ -1,0 +1,22 @@
+<!-- 液态分段控件（v0.7.20 需求②）：独立胶囊指示器在等分格之间移动，
+     先按移动方向预冲、再带过冲回弹落位 —— 与底部导航栏 (.tab-ind) 同一套手感。
+     指示器写在 seg-item 之前 = 天然垫底，不遮文字、不拦命中（seg-item 自己 z-index:1）。
+     ⚠️ 指示器几何由组件 JS 下发，单位 rpx。
+     ⚠️ 位移走 **transform: translateX()** 而不是 left（v0.7.21 需求⑤ 规格④）：left 是布局属性，
+        每帧都要重新布局；transform 只走合成器。等分格宽固定 → 换格时 width 是常量，
+        所以真正在动的只有这**一条**轴，换成 transform 是干净的替换。
+        宽度仍然只能用 width（横向 scale 会把胶囊圆角拉成椭圆）。
+        改 `.seg` 内边距/宽度的口径必须同步改 index.js 的 INSET_RPX 与 cell 计算。 -->
+<view class="seg" style="width:{{width}}rpx">
+  <view class="seg-ind {{indCls}}" style="transform:translateX({{indLeft}}rpx);width:{{indWidth}}rpx"></view>
+  <view
+    wx:for="{{items}}"
+    wx:key="key"
+    class="seg-item {{value === item.key ? 'on' : ''}}"
+    data-key="{{item.key}}"
+    hover-class="seg-hover"
+    hover-start-time="0"
+    hover-stay-time="60"
+    bindtap="onPick"
+  >{{item.text}}</view>
+</view>

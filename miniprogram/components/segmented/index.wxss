@@ -1,0 +1,88 @@
+/* ============ 液态分段控件（v0.7.20 需求②） ============
+ * 用户原话：「课程表页上面的 ab 组 … 切换太僵硬，动画改为和底部导航栏一样。
+ *   选到的选择稍微变大。例如现在是 A 组，A 组二字稍微大一点，切换到 B 组，
+ *   B 组变大、A 组变回原始大小。值日页上面的按日和按人也是一样修改。」
+ *
+ * 口径与底部导航栏（custom-tab-bar）逐条对齐：
+ *   · 高亮不再是「选中项自己变白底」，而是**一块独立胶囊** `.seg-ind`，在等分格之间移动；
+ *   · 两拍节奏 stretch（140ms 预冲）→ settle（220ms 回弹），时长写在 index.js 的 IND_MS；
+ *   · 指示器**满高 + 圆角 = 轨道半径**（36rpx = 72/2），首格左缘 / 末格右缘与轨道圆角同心，
+ *     预冲冲出轨道时由 `.seg` 的 overflow:hidden 沿圆弧裁掉 —— 与底栏同一种「贴边流动」，
+ *     既不会露出直角白边，也不需要额外留白。
+ *   · 位移用 transform:translateX()（v0.7.21 需求⑤ 规格④），不用 left —— 见 index.wxml 顶部注释。
+ *
+ * ⚠️ `.seg` 不写 padding / border（box-sizing 也就不用管）：格宽 = width / n 精确等分，
+ *    指示器的位移量/宽度才能和文字格同轴。改动这里必须同步 index.js 的 _sync()（cell = width / n）与 INSET_RPX。
+ * ⚠️ `.seg-item` 必须保留带 background 的 transition —— scripts/check-chip-anim.js ③
+ *    用文本断言守住「切换不是硬切」。
+ * ⚠️ 不用 backdrop-filter：本组件压在页面极光渐变上，渐变本身平滑，模糊没有收益，
+ *    反而会连锁触发两条降级要求（check-glass.js）。半透明白 + 白描边 + 靛蓝投影就够。
+ */
+.seg {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 72rpx;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.42);
+  border-radius: 36rpx;
+  /* 预冲冲出轨道时沿圆角裁掉（圆角半径 = 半个高度 = 指示器自身的胶囊半径，切口不露直角） */
+  overflow: hidden;
+  /* 一圈极淡的内描边：玻璃表面在渐变上的「边缘可见」靠它，而不是靠更不透明 */
+  box-shadow:
+    inset 0 0 0 1rpx rgba(255, 255, 255, 0.55),
+    inset 0 2rpx 0 rgba(255, 255, 255, 0.55);
+}
+.seg-ind {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 36rpx;
+  background: #FFFFFF;
+  box-shadow: 0 4rpx 14rpx rgba(31, 38, 135, 0.10);
+  z-index: 0;
+  /* 位移由内联 transform:translateX() 下发（v0.7.21 需求⑤ 规格④），left 恒为 0 —— 见 index.wxml 顶部注释 */
+  pointer-events: none;
+}
+/* 两拍换速：stretch 前缘快（先越过目标），settle 带过冲回落（.32,1.5 会略微冲出再收回）。
+   位移走 transform（合成器），所以这里的曲线只作用在合成属性上，不触发重排。
+   时长必须与 index.js 的 IND_MS 一致。 */
+.seg-ind.stretch {
+  transition: transform .14s cubic-bezier(.2, 0, .2, 1), width .12s cubic-bezier(.55, 0, .85, .4);
+}
+.seg-ind.settle {
+  transition: transform .24s cubic-bezier(.32, 1.5, .64, 1), width .22s cubic-bezier(.32, 1.5, .64, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .seg-ind.stretch,
+  .seg-ind.settle {
+    transition-duration: .01ms;
+  }
+}
+.seg-item {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 36rpx;
+  font-size: 26rpx;
+  color: #86909C;
+  /* 等分格宽固定 → 文字变大不会挤动邻项，因此「变大」可以直接过渡 font-size */
+  transition: background .2s, color .2s, font-size .18s ease;
+}
+/* 选中项：字稍微变大 + 加重（用户需求②原话「选到的选择稍微变大」）。
+   这套「变大」与指示器的移动并行发生，不再靠自绘白底 —— 白底由 .seg-ind 承担。 */
+.seg-item.on {
+  color: #1D2129;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+/* 按下反馈：hover-class 配 hover-start-time=0，touchstart 立刻生效 */
+.seg-hover {
+  opacity: .55;
+}

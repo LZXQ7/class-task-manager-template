@@ -1,0 +1,50 @@
+<!-- C15 · 周切换条（P3 课表 / P4 值日 / P5 手动排班 共用）
+     v0.7.20 需求③重做：用户原话「课程表和值日页上面的日期 … 修改样式，目前的太丑了，
+     左右箭头改为单独的气泡箭头」。
+     形态从「通底白条 + 裸箭头」改成 **左右两枚玻璃气泡箭头 + 中间一张日期卡**：
+       · 通底白条去掉（它把页面切成上下两半，是「丑」的主因），改成三段悬浮件；
+       · 日期卡两行：上行是日期区间（放大 + 加重，视觉主体），
+         下行是「第 N 周 · 单/双周」＋（本周圆点）＋（草稿/已发布/已归档）；
+       · 气泡箭头 76rpx 圆形，按下缩到 0.92 —— 与底栏 / FAB 的按下语言一致。
+     ⚠️ 组件仍靠 `overflow:hidden`？没有：气泡的 scale 按下态不能被裁，故不设 overflow。
+     ⚠️ 状态标签（statusText/statusType）只有值日页 / 手动排班页传，课表页不传 ——
+        无标签时下行自然居中，不需要旧的 .ws-placeholder 占位块（已删除）。 -->
+<view class="ws">
+  <view
+    class="ws-bubble {{week <= 1 ? 'off' : ''}}"
+    hover-class="ws-bubble-hover"
+    hover-start-time="0"
+    hover-stay-time="60"
+    bindtap="onPrev"
+  >
+    <app-icon name="arrow-left" variant="gray" size="{{36}}" />
+  </view>
+
+  <view
+    class="ws-card"
+    hover-class="ws-card-hover"
+    hover-start-time="0"
+    hover-stay-time="60"
+    bindtap="onPick"
+  >
+    <view class="ws-range">{{rangeText}}</view>
+    <view class="ws-sub">
+      <text class="ws-odd">{{oddText}}</text>
+      <view wx:if="{{isCurrent}}" class="ws-now">
+        <view class="ws-dot"></view>
+        <text>本周</text>
+      </view>
+      <view wx:if="{{statusText}}" class="ws-status {{statusType}}">{{statusText}}</view>
+    </view>
+  </view>
+
+  <view
+    class="ws-bubble {{week >= total ? 'off' : ''}}"
+    hover-class="ws-bubble-hover"
+    hover-start-time="0"
+    hover-stay-time="60"
+    bindtap="onNext"
+  >
+    <app-icon name="arrow-right" variant="gray" size="{{36}}" />
+  </view>
+</view>

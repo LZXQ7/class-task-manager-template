@@ -1,0 +1,18 @@
+{
+  "navigationStyle": "custom",
+  "backgroundColor": "#F5F6F8",
+  "initialRenderingCache": "static",
+  "usingComponents": {
+    "app-icon": "../../components/app-icon/index",
+    "nav-bar": "../../components/nav-bar/index",
+    "week-switcher": "../../components/week-switcher/index",
+    "bottom-sheet": "../../components/bottom-sheet/index",
+    "empty-state": "../../components/empty-state/index",
+    "skeleton": "../../components/skeleton/index",
+    "notice-bar": "../../components/notice-bar/index",
+    "avatar-tag": "../../components/avatar-tag/index",
+    "status-pill": "../../components/status-pill/index",
+    "segmented": "../../components/segmented/index",
+    "stepper": "../../components/stepper/index"
+  }
+}

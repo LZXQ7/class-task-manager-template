@@ -1,0 +1,528 @@
+/**
+ * 全局样式：设计系统 2.5 令牌 + 基础排版 + 通用布局类
+ * 1px = 2rpx（375×812 设计稿 → 750rpx 基准）
+ */
+page {
+  /* 背景 */
+  --bg-page: #F5F6F8;
+  --bg-card: #FFFFFF;
+  --bg-fill: #F2F3F5;
+  --bg-mask: rgba(0,0,0,0.45);
+
+  /* 文字 */
+  --text-1: #1D2129;
+  --text-2: #4E5969;
+  --text-3: #86909C;
+  --text-4: #C9CDD4;
+  --text-white: #FFFFFF;
+
+  /* 描边 */
+  --line-1: #E5E6EB;
+  --line-2: #F2F3F5;
+
+  /* 品牌 */
+  --brand: #3370FF;
+  --brand-press: #245BDB;
+  --brand-disable: #A8C1FF;
+  --brand-light: #F0F5FF;
+
+  /* 语义色 */
+  --success: #00B42A;
+  --success-bg: #E8FFEA;
+  --warning: #FF7D00;
+  --warning-bg: #FFF7E8;
+  --danger: #F53F3F;
+  --danger-bg: #FFECE8;
+  --purple: #7C5CFF;
+  --purple-bg: #F3F0FF;
+
+  /* 阴影：投影用中性黑（原始 Arco 配色），轻投影 + 微模糊 */
+  --shadow-1: 0 4rpx 16rpx rgba(29,33,41,0.10);
+  --shadow-2: 0 8rpx 32rpx rgba(29,33,41,0.15);
+
+  /* 圆角（Auroraqua 尺度：12px / 16px / 20px = 24rpx / 32rpx / 40rpx；v0.7.18 统一放大） */
+  --r-sm: 24rpx;
+  --r-md: 32rpx;
+  --r-lg: 40rpx;
+  --r-pill: 999rpx;
+
+  /* 布局常量 */
+  --nav-h: 88rpx;
+  --tab-h: 100rpx;
+
+  /* ---- 液态玻璃材质令牌（v0.7.17）----
+   * 一次「玻璃」= 四层合成（对齐 Apple Liquid Glass / Kyant0 Backdrop 的分层口径）：
+   *   ① tint     半透明底色（--glass-bg / --glass-bg-strong）
+   *   ② blur     背景模糊 + 饱和度提升（--glass-blur）→ 背后的颜色「流」进来
+   *   ③ edge     1rpx 亮边 + 顶部内高光（--glass-edge / --glass-highlight）→ 玻璃的厚度感
+   *   ④ shadow   大半径低透明度外投影（--glass-shadow）→ 玻璃浮在内容之上
+   * ⚠️ 关键前提：模糊只能模糊「背后已有的东西」。页面若还是纯白底，blur 的结果仍是纯白，
+   *   玻璃和白卡长得一模一样 —— 这就是以前「底栏不像玻璃」的另一半原因。
+   *   所以 page 同步垫了一层极淡的环境色晕（见下面的 background-image）。
+   * ⚠️ 模糊与圆角必须由**同一个元素**承担：`overflow:hidden` 不会裁 backdrop-filter
+   *   （模糊的是元素背后的内容，不受父级圆角约束），所以圆角要写在玻璃元素自己身上。
+   * ⚠️ 各组件（nav-bar / bottom-sheet / dialog / duty-sheet / custom-tab-bar）都开了
+   *   `addGlobalClass`，且 CSS 自定义属性会继承进组件 —— 这些令牌在组件里同样可直接引用。
+   */
+  --glass-bg: rgba(255, 255, 255, 0.35);
+  --glass-bg-strong: rgba(255, 255, 255, 0.50);
+  --glass-blur: blur(24px) saturate(180%);
+  --glass-edge: rgba(255, 255, 255, 0.50);
+  --glass-shadow: 0 16rpx 64rpx rgba(29,33,41,0.15);
+  --glass-highlight: inset 0 2rpx 0 rgba(255, 255, 255, 0.60);
+
+  /* 极光背景（v0.7.19 回退为蓝调）：
+     135° 浅蓝 → 靛 → 淡紫。玻璃必须压在**有颜色的渐变**上才显形 —— 「冰态果冻」
+     那种多层堆叠感的来源，纯白底上做玻璃只会得到白卡；只把色相换回原来的蓝/靛/淡紫。
+     `background-attachment: fixed` 让极光钉在视口上、内容从它上面滑过；不支持时退化为斜向渐变。 */
+  background-color: #F1F4F9;
+  background-image: linear-gradient(135deg, #EAF1FF 0%, #DCE8FF 40%, #F3F0FF 100%);
+  background-repeat: no-repeat;
+  background-position: top left;
+  background-size: 100% 100%;
+  background-attachment: fixed;
+
+  color: var(--text-1);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  font-size: 28rpx;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+view, text, scroll-view, button, input, textarea, image {
+  box-sizing: border-box;
+}
+
+button::after { border: none; }
+
+/* ============ 容器 ============ */
+/* `.page` 不再是「画一层底色」，而是**让底下的极光背景透上来**（v0.7.17 起）：
+   底色与极光渐变统一由根节点 `page` 承担，这样玻璃卡片才有东西可模糊。 */
+.page {
+  min-height: 100vh;
+  background: transparent;
+}
+.page-body {
+  padding: 0 32rpx;
+}
+.page-foot-space { height: 168rpx; }
+
+/* 输入框 placeholder 统一色（放在全局：home / duty / mine / manual / timetable 五页共用，
+ * 只有 manual、timetable 各写了一份局部副本，其余页面漏了 → placeholder 一直是默认灰） */
+.f-ph { color: #C9CDD4; font-size: 28rpx; }
+
+/* ============ 卡片 = 玻璃材质（v0.7.17 液态玻璃）============
+ * 版式一律不动：圆角仍是 --r-md、外边距仍由各页决定、内层结构不变；
+ * 只把「一块白底 + 浅投影」换成 ①tint ②blur ③edge+高光 ④柔投影 四层合成。 */
+.card {
+  background: var(--glass-bg);
+  border: 1rpx solid var(--glass-edge);
+  border-radius: var(--r-md);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  overflow: hidden;
+}
+.card-bordered {
+  background: var(--glass-bg);
+  border: 2rpx solid var(--glass-edge);
+  border-radius: var(--r-md);
+  box-shadow: var(--glass-highlight);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+/* 不支持 backdrop-filter 的机型（部分安卓 WebView）：把底色加厚到接近实心。
+   宁可「像磨砂白卡」，也不要「透明但糊成一团、文字压着内容」。 */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .card,
+  .card-bordered {
+    background: rgba(255, 255, 255, 0.9);
+  }
+}
+/* 系统开了「降低透明度」：直接实心、不做模糊（无障碍优先于观感） */
+@media (prefers-reduced-transparency: reduce) {
+  .card,
+  .card-bordered {
+    background: #FFFFFF;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* ============ 排版：T1–T9 / NUM ============
+ * v0.7.18：标题一律 700（Auroraqua 的 `[class*="title"] { font-weight: 700 }`）。
+ * 玻璃面上的文字不能靠「细体」表现优雅 —— 背景在流动，细体笔画会被吃掉；
+ * 加大字重是 Apple 说的「vibrancy」在小程序里最省事的等价物。 */
+.t1 { font-size: 56rpx; line-height: 76rpx; font-weight: 700; color: var(--text-1); }
+.t2 { font-size: 44rpx; line-height: 60rpx; font-weight: 700; color: var(--text-1); }
+.t3 { font-size: 40rpx; line-height: 56rpx; font-weight: 700; color: var(--text-1); }
+.t4 { font-size: 34rpx; line-height: 48rpx; font-weight: 700; color: var(--text-1); }
+.t5 { font-size: 30rpx; line-height: 44rpx; font-weight: 500; color: var(--text-1); }
+.t6 { font-size: 28rpx; line-height: 40rpx; font-weight: 400; color: var(--text-1); }
+.t7 { font-size: 26rpx; line-height: 38rpx; font-weight: 400; color: var(--text-2); }
+.t8 { font-size: 24rpx; line-height: 34rpx; font-weight: 400; color: var(--text-3); }
+.t9 { font-size: 22rpx; line-height: 30rpx; font-weight: 400; color: var(--text-3); }
+.num { font-size: 48rpx; line-height: 60rpx; font-weight: 700; color: var(--text-1); }
+
+.c-1 { color: var(--text-1); }
+.c-2 { color: var(--text-2); }
+.c-3 { color: var(--text-3); }
+.c-4 { color: var(--text-4); }
+.c-brand { color: var(--brand); }
+.c-success { color: var(--success); }
+.c-warning { color: var(--warning); }
+.c-danger { color: var(--danger); }
+.c-purple { color: var(--purple); }
+.c-white { color: #FFFFFF; }
+
+.w5 { font-weight: 500; }
+.w6 { font-weight: 600; }
+.w7 { font-weight: 700; }
+
+.ellipsis {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.clamp2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+/* ============ 通用布局 ============ */
+.row { display: flex; flex-direction: row; align-items: center; }
+.col { display: flex; flex-direction: column; }
+.between { justify-content: space-between; }
+.center { justify-content: center; }
+.end { justify-content: flex-end; }
+.wrap { flex-wrap: wrap; }
+.f1 { flex: 1; min-width: 0; }
+.relative { position: relative; }
+
+.hairline-top { border-top: 2rpx solid var(--line-2); }
+.hairline-bottom { border-bottom: 2rpx solid var(--line-2); }
+
+/* ============ 按钮 ============
+ * v0.7.18：主按钮改成 Auroraqua 的品牌渐变（violet → pink → accent，135°），
+ * 它是「冰态果冻」最显眼的识别点之一；次按钮用他们的 .glass-btn 配方
+ * （白色半透明斜向渐变 + 白描边），压在极光背景上会自然透出底色。 */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 96rpx;
+  border-radius: var(--r-md);
+  font-size: 32rpx;
+  font-weight: 600;
+  background: linear-gradient(135deg, #7C5CFF 0%, #3370FF 55%, #F472B6 100%);
+  color: #FFFFFF;
+  box-shadow: 0 8rpx 24rpx rgba(51,112,255,0.28);
+  transition: opacity .15s, transform .12s, box-shadow .15s;
+}
+.btn-hover { background: linear-gradient(135deg, #722ED1 0%, #245BDB 55%, #3370FF 100%); }
+.btn.disabled {
+  background: var(--brand-disable);
+  color: #FFFFFF;
+  box-shadow: none;
+}
+.btn-ghost {
+  background: var(--brand-light);
+  color: var(--brand);
+  box-shadow: none;
+}
+.btn-ghost.btn-hover { background: #DCE8FF; }
+.btn-outline {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.42));
+  color: var(--brand);
+  border: 1rpx solid rgba(255, 255, 255, 0.72);
+  box-shadow: 0 4rpx 16rpx rgba(29,33,41,0.10);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.btn-outline.btn-hover { background: rgba(255, 255, 255, 0.82); }
+.btn-sm {
+  height: 64rpx;
+  padding: 0 24rpx;
+  font-size: 26rpx;
+  border-radius: var(--r-sm);
+}
+.btn-round { border-radius: var(--r-pill); }
+
+/* ============ 安全区 ============ */
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* ============ Tab 页入场 · 分块淡入 + 轻微上浮（2026-09-26 / v0.7.14 第 3 次定案） ============
+ * 问题：四个 Tab 页是 wx.switchTab 切的，小程序原生没有过渡，换页像「啪」地一下换掉。
+ *
+ * 历史五次迭代，都记在这里，别再走回头路：
+ *   ① 整页 opacity 0→1 每次重播  → 反馈「切页面闪一下」（内容没变，却整屏重来一遍）
+ *   ② 只播一次、回访静止        → 反馈「直接展示太生硬」
+ *   ③ 分块 stagger（错峰 / 位移都大）→ 反馈「错峰太碎」
+ *   ④ 单一整体节拍（整页 14px 上浮）→ 反馈「展开动画不好看」，要求全部删掉重做
+ *   ⑤ 极简 cross-fade（零位移）  → 反馈「看不见；点击首页应该有进入动画」
+ *
+ * 现在（v0.7.31，2026-09-29 用户反馈后「加强错峰 + 就绪门控」）：
+ *   · 首屏内容块**从上到下依次**就位：每块淡入 + 上浮 8px（回访 5px）；
+ *   · 块间错峰 **36ms**（回访 26ms），延迟封顶第 7 块，后段块不再拉长尾巴；
+ *   · 总时长 = 单块 180ms + 6×36ms = 396ms（回访 296ms）。⚠️ 已超「300ms 导航预算」——
+ *     2026-09-29 用户明确反馈「几乎一起出现、看不出递进」，故拉开错峰、预算放宽到 460ms
+ *     （导航预算针对整页切换；这里是可读的分块序列，看得清先后才是目的）。
+ *   · 位移只有 8px、且只动内容块（nav-bar 不动）—— 与被否掉的第 ④ 版（整页 14px）不同，
+ *     读起来是「内容轻轻落位」，不是「整页跳一下」。
+ *   · **就绪后统一播**：未就绪时根节点挂 pa-hold（.st-item 透明），等「身份 + 首屏数据」
+ *     就绪、或 page-anim 的 READY_MS 兜底超时再开播 —— 否则异步门控的卡（本班请假 /
+ *     我的·本学期统计）首屏不在 DOM 里，会「独自晚出现」。
+ *
+ * ⚠️ 第 ③ 版被说「太碎」，第 ⑦ 版（36ms）是**在「太碎」与「看不出」之间取的中间值**：
+ *    既不像 ③ 那样「几段各演」，也不像 ⑥ 的 20ms 那样「几乎一起」。改这三个数前先想清楚。
+ *
+ * 机制：根节点带 pa-first（首次）或 pa-lite-a / pa-lite-b（回访**轮换**，两个名字换来换去
+ * 才能让 CSS animation 重播 —— 同名 class 不会重播，见 utils/page-anim.js）。
+ * 反面做法：先摘 class 再 setTimeout 加回来 —— 摘掉的那一帧元素完整可见，反而会闪。
+ *
+ * ⚠️ 错峰用 **wxml 档位类**（st-2 / st-3 / … / st-7，第 7 块起封顶）实现，**不用兄弟选择器**：
+ *    · WXSS **不支持通用兄弟选择器 `~`** —— 真机编译直接报
+ *      `app.wxss(248:31): unexpected token ~`，**整个 app.wxss 编译失败 → 全站样式丢失**。
+ *      2026-09-26 实际踩到：本地 32 个离线门禁全绿却编不过，因为门禁只做文本检查、
+ *      跑不了真正的 WCSS 编译器。「门禁绿」≠「能编译」，这条已写进 check-tab-enter。
+ *    · 档位类的好处是**静态可校验**：check-tab-enter 断言「第 N 个 .st-item 必须标 st-N、
+ *      从 st-2 起连续不跳号、封顶 st-7」，比运行时猜 DOM 相邻关系可靠得多。
+ *    · 代价：增删内容块要手工维护档位号；`wx:if` 为假时序号会跳过一格
+ *      （表现为错峰不连续，无正确性问题）。
+ *    前提：**所有 .st-item 必须互为兄弟**（不许一个 st-item 套在另一个里）——
+ *    嵌套会让两层的位移叠加成 16px，由 check-tab-enter 断言。
+ *
+ * ⚠️⚠️ transform 会创建包含块：**任何 position: fixed 元素都不能待在 .st-item 内部**
+ *    （动画那 180ms 里它会改成相对这个块定位而飞走）。纯 opacity 时代这只是约定，
+ *    加入 translateY 后它是**硬正确性要求**，由 check-tab-enter 逐页断言。
+ *
+ * ⚠️ 必须带 fill-mode: backwards：动画首帧 opacity: 0，不加 backwards 在低性能机上
+ *    可能先闪现一帧再开始播（与 .fade-item 同理）。
+ */
+@keyframes paInFull {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* 两套内容相同、只是名字不同的 lite keyframes —— 换名字 = 重播 */
+@keyframes paInLiteA {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes paInLiteB {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* reduced-motion 的降级形态：只做极短淡入、零位移（定义在顶层，@media 里只引用） */
+@keyframes paReduce {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+/* 未就绪（v0.7.31）：根节点挂 pa-hold —— .st-item 先透明（=动画首帧），
+   等「身份 + 首屏数据」就绪（或 page-anim 的 READY_MS 兜底）再统一换成 pa-* 开播。
+   为什么需要它：异步门控的卡（首页「本班请假」/ 我的「本学期」统计）首屏不在 DOM 里，
+   若动画早已开播，它们要等数据回来才「独自晚出现」。 */
+.pa-hold .st-item { opacity: 0; }
+
+/* will-change 只跟着真正会动的块走，不常驻占内存 */
+.pa-first .st-item,
+.pa-lite-a .st-item,
+.pa-lite-b .st-item {
+  will-change: opacity, transform;
+}
+
+/* 首次进入（完整版）：分块淡入 + 8px 上浮，块间 36ms，延迟封顶第 7 块（总 396ms）
+   档位选择器写成 `.st-item.st-N`（权重 0-3-0 > 基档 0-2-0）：animation 简写会重置
+   animation-delay，若只写 `.st-N`（同权重 0-2-0）则一旦顺序写反就静默失效。 */
+.pa-first .st-item { animation: paInFull .18s cubic-bezier(.22, .61, .36, 1) backwards; }
+.pa-first .st-item.st-1 { animation-delay: 0ms; }   /* 档位 1 = 无延迟；显式写出是为了让 st-1 在 wxss 里有定义（check-wxss 要求） */
+.pa-first .st-item.st-2 { animation-delay: 36ms; }
+.pa-first .st-item.st-3 { animation-delay: 72ms; }
+.pa-first .st-item.st-4 { animation-delay: 108ms; }
+.pa-first .st-item.st-5 { animation-delay: 144ms; }
+.pa-first .st-item.st-6 { animation-delay: 180ms; }
+.pa-first .st-item.st-7 { animation-delay: 216ms; }
+
+/* 回访（轻量版）：同样分块，位移与错峰都更轻（5px / 26ms，总 296ms） */
+.pa-lite-a .st-item { animation: paInLiteA .14s ease-out backwards; }
+.pa-lite-a .st-item.st-1 { animation-delay: 0ms; }
+.pa-lite-a .st-item.st-2 { animation-delay: 26ms; }
+.pa-lite-a .st-item.st-3 { animation-delay: 52ms; }
+.pa-lite-a .st-item.st-4 { animation-delay: 78ms; }
+.pa-lite-a .st-item.st-5 { animation-delay: 104ms; }
+.pa-lite-a .st-item.st-6 { animation-delay: 130ms; }
+.pa-lite-a .st-item.st-7 { animation-delay: 156ms; }
+.pa-lite-b .st-item { animation: paInLiteB .14s ease-out backwards; }
+.pa-lite-b .st-item.st-1 { animation-delay: 0ms; }
+.pa-lite-b .st-item.st-2 { animation-delay: 26ms; }
+.pa-lite-b .st-item.st-3 { animation-delay: 52ms; }
+.pa-lite-b .st-item.st-4 { animation-delay: 78ms; }
+.pa-lite-b .st-item.st-5 { animation-delay: 104ms; }
+.pa-lite-b .st-item.st-6 { animation-delay: 130ms; }
+.pa-lite-b .st-item.st-7 { animation-delay: 156ms; }
+
+/* 系统开了「减弱动态效果」：去掉位移与错峰，只保留 80ms 淡入（不硬切，也不演动作） */
+@media (prefers-reduced-motion: reduce) {
+  .pa-first .st-item,
+  .pa-lite-a .st-item,
+  .pa-lite-b .st-item {
+    animation: paReduce .08s linear backwards;
+    will-change: auto;
+  }
+  /* 档位规则权重 0-3-0 高于基档 0-2-0，不会被上面简写重置，必须显式清零 */
+  .pa-first .st-item.st-2, .pa-first .st-item.st-3, .pa-first .st-item.st-4,
+  .pa-first .st-item.st-5, .pa-first .st-item.st-6, .pa-first .st-item.st-7,
+  .pa-lite-a .st-item.st-2, .pa-lite-a .st-item.st-3, .pa-lite-a .st-item.st-4,
+  .pa-lite-a .st-item.st-5, .pa-lite-a .st-item.st-6, .pa-lite-a .st-item.st-7,
+  .pa-lite-b .st-item.st-2, .pa-lite-b .st-item.st-3, .pa-lite-b .st-item.st-4,
+  .pa-lite-b .st-item.st-5, .pa-lite-b .st-item.st-6, .pa-lite-b .st-item.st-7 {
+    animation-delay: 0s;
+  }
+}
+
+/* ============ 按下反馈（全局通用） ============
+ * `wx.navigateTo` / `wx.switchTab` 到**首次访问**的页面要等页面代码注入 + 首帧
+ * （100~300ms 量级），这段时间里被点的行如果毫无变化，主观感受就是「点进去先卡一下」。
+ * 用 `hover-class` 配 `hover-start-time="0"` 让按下瞬间就有反馈，这点延迟在感知上就消失了。
+ *
+ * 用法：<view class="xxx" hover-class="tap-hover" hover-start-time="0" hover-stay-time="60">
+ * 注意：行放在 `.card` 里时，`.card` 自带 `overflow: hidden`，高亮背景会被裁进圆角。
+ */
+.tap-hover {
+  background: rgba(51,112,255,.05);
+}
+
+/* 半透明按压反馈（用于透明底/图标按钮：FAB、导航胶囊、文字链）。
+   tap-hover 是加底色，这类元素没有底色可加，用整体变淡代替。 */
+.press-dim {
+  opacity: .55;
+}
+
+/* ============ 列表项交错淡入（2026-09-25） ============
+ * 用法：<view class="fade-item" style="animation-delay:{{(index > 8 ? 8 : index) * 24}}ms">
+ * 延迟封顶在第 8 项（约 190ms）——列表动画最忌「等最后一项才出来」；
+ * 且只对首屏视觉生效，滚动加载的项本来就晚于 200ms 才进入视口。
+ *
+ * ⚠️ 与上面 Tab 页入场不同：这里**必须带 fill-mode: backwards**。
+ * 原因：Tab 根节点没有 delay，动画立即开始；而交错项在 delay 期间处于
+ * 「原始状态」（完全可见），不加 backwards 会先闪现再消失再淡入。
+ * backwards 让 delay 期间保持 from 帧（opacity: 0）。
+ * 仍然只动 opacity —— 不创建包含块，对 fixed 后代（FAB 等）无影响。
+ */
+@keyframes itemIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.fade-item {
+  animation: itemIn .28s ease-out backwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fade-item { animation: none; }
+}
+
+/* ============ 二级页进场（v0.7.14 · #4 新页转场） ============
+ * 通过 navigateTo 打开的二级页（通知 / 名单 / 班级 / 绑定 / 文档 / 手册 / 外链）。
+ * 只做**纯透明度淡入**——故意不用 transform：opacity 不会给后代的 position:fixed
+ * 元素建立包含块（transform / filter 才会），所以页面里即便有 nav-bar、回收站、
+ * 图片查看器、bottom-sheet 这些 fixed 元素，也绝不会被入场动画「带跑」（回归零风险）。
+ * 系统 navigateTo 自带从右滑入的转场，叠加一层内容淡入，观感是「内容浮现」而非突兀弹出。
+ * 单一整体节拍（Apple 式）：整页一次到位，不做分块错峰。 */
+.page-fade { animation: paReduce .26s ease backwards; }
+@media (prefers-reduced-motion: reduce) {
+  .page-fade { animation: none; }
+}
+
+/* ============ 左右滑动切周 · 方向性内容过渡（2026-09-26 / v0.7.11） ============
+ * 值日页 / 手动排班页共用；class 由 utils/swipe.js 的 animOut / animIn / animEdge 下发。
+ *
+ * 时序：out 160ms（旧内容朝手指方向滑走 + 淡出）→ 换数据 → in 220ms（新内容从反方向滑入）。
+ * 缓动：离场用**加速**曲线（先慢后快，像被手指带走），入场用**减速**曲线（快进慢停）。
+ *       两段都压在 150~300ms 内 —— 超过这个区间，主观感受就从「顺滑」变成「卡顿」。
+ *
+ * ⚠️ 只动 transform / opacity：动 width / left / margin 会触发重排，长列表上必掉帧。
+ * ⚠️ 动画容器里不能放 fixed 元素 —— transform 会创建包含块，fixed 后代会跟着一起位移。
+ *    值日页的离屏 canvas（.off-canvas）、手动排班页的底部条（.ms-bar）都在容器外面
+ *    （由 scripts/check-week-swipe.js 守着，谁把 fixed 挪进来会直接报错）。
+ */
+/* 动画容器本身：显式块级（万一被放进 flex 行里也不会塌成一列）。
+   class 名由 utils/swipe.js 的模板占位符约定 —— 页面写
+   <view class="wk-swipe {{swipeCls}}">，动画 class 是动态挂上去的。 */
+.wk-swipe { display: block; }
+
+@keyframes wkOutLeft {
+  from { transform: translateX(0); opacity: 1; }
+  to   { transform: translateX(-32px); opacity: 0; }
+}
+@keyframes wkOutRight {
+  from { transform: translateX(0); opacity: 1; }
+  to   { transform: translateX(32px); opacity: 0; }
+}
+@keyframes wkInLeft {
+  from { transform: translateX(-32px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+@keyframes wkInRight {
+  from { transform: translateX(32px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+/* 到头回弹：只探出 10px 就弹回 —— 比整段「滑出去」轻得多，够提示又不喧宾夺主 */
+@keyframes wkEdgeLeft {
+  0%   { transform: translateX(0); }
+  45%  { transform: translateX(-10px); }
+  100% { transform: translateX(0); }
+}
+@keyframes wkEdgeRight {
+  0%   { transform: translateX(0); }
+  45%  { transform: translateX(10px); }
+  100% { transform: translateX(0); }
+}
+/* will-change 只跟着这 6 个 class 走（动画结束、class 摘掉后自动回落），不常驻占内存 */
+.wk-out-left,
+.wk-out-right,
+.wk-in-left,
+.wk-in-right,
+.wk-edge-left,
+.wk-edge-right {
+  will-change: transform, opacity;
+}
+.wk-out-left   { animation: wkOutLeft .16s cubic-bezier(0.7, 0, 0.84, 0) both; }
+.wk-out-right  { animation: wkOutRight .16s cubic-bezier(0.7, 0, 0.84, 0) both; }
+.wk-in-left    { animation: wkInLeft .22s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.wk-in-right   { animation: wkInRight .22s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.wk-edge-left  { animation: wkEdgeLeft .22s ease-out both; }
+.wk-edge-right { animation: wkEdgeRight .22s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .wk-out-left, .wk-out-right,
+  .wk-in-left, .wk-in-right,
+  .wk-edge-left, .wk-edge-right {
+    animation: none;
+  }
+}
+
+/* ============ 多选标签「挤开」动画（2026-09-26 / v0.7.13 需求④） ============
+ * 起因：发布通知里点「班级 / 职位」这类多选标签，原本只是**瞬间换色**，
+ *   宽度与位置全是硬切 —— 邻项「跳」到新位置，中间没有任何过渡。
+ * 现在：选中的标签**横向 padding 变大**（真的多占一点宽度），
+ *   同一行的邻项随 flex 逐帧重排**平滑让位**，而不是瞬移。
+ *
+ * ⚠️ 为什么过渡的是 padding 而不是 transform: scaleX：
+ *   scaleX 只改绘制、不改布局 —— 邻项根本不会动，看着像「标签自己胖了一下、
+ *   旁边纹丝不动」，比硬切还怪；padding 是布局属性，过渡它才会带动邻项让位。
+ *   transform 只负责一点点「顶起来」的手感（scale 1.04），不参与让位。
+ *
+ * ⚠️ 过渡列表里**只有** padding / transform / 颜色：
+ *   height、width、margin 一旦进列表，每次切换都要整行重排（低端机上点一下卡一下）。
+ *
+ * ⚠️ 不加常驻 will-change：这是挂在**每一个**标签上的类（成员网格有 50+ 个），
+ *   常驻提示层会把内存白白吃掉几十个图层；这里的过渡很短，不值得。
+ */
+.chip-motion {
+  transition: padding .22s cubic-bezier(0.16, 1, 0.3, 1), background-color .18s ease, border-color .18s ease, color .18s ease, transform .22s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+/* 选中态：多占一点宽度（各页面在自己的 .on 里补 padding）+ 轻微顶起 */
+.chip-motion.on { transform: scale(1.04); }
+@media (prefers-reduced-motion: reduce) {
+  .chip-motion { transition-duration: .01ms; }
+  .chip-motion.on { transform: none; }
+}

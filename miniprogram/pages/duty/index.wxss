@@ -1,0 +1,521 @@
+/* 主内容滚动交给 spring-scroll（v0.7.19 需求④）：页面根不再原生滚动，
+   height:100vh + overflow:hidden 防止与 spring-scroll 双重滚动。 */
+.dt { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+.dt-scroll { display: block; }
+.dt-wrap { padding: 24rpx 32rpx; }
+.dt-nav-btn { font-size: 30rpx; color: #3370FF; padding: 0 16rpx; }
+
+/* 卡片统一用全局玻璃材质（app.wxss .card）；本页不再覆写成纯白，
+   与「我的」页下方卡片保持一致（v0.7.19 需求③）。 */
+.card {
+  background: var(--glass-bg);
+  border: 1rpx solid var(--glass-edge);
+  border-radius: var(--r-md);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  overflow: hidden;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .card { background: rgba(255, 255, 255, 0.9); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .card { background: #FFFFFF; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+.dt-daycard { margin: 0 32rpx 24rpx; }
+/* 按人视图整卡：与按日视图同宽（v0.7.19 需求②） */
+.dt-personcard { margin: 0 32rpx 24rpx; }
+.dt-dayhead {
+  height: 80rpx;
+  padding: 0 32rpx;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2rpx solid #F2F3F5;
+}
+.dt-daytitle { font-size: 30rpx; font-weight: 600; color: #1D2129; }
+.dt-daysub { font-size: 24rpx; color: #86909C; }
+.dt-dayfoot {
+  height: 64rpx;
+  padding: 0 32rpx;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 24rpx;
+  color: #86909C;
+}
+
+.dt-row {
+  position: relative;
+  min-height: 112rpx;
+  padding: 16rpx 32rpx;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  border-bottom: 2rpx solid #F2F3F5;
+}
+.dt-row:last-child { border-bottom: none; }
+.dt-row.mine { background: #F0F5FF; }
+.dt-row.sub { background: #F7F8FA; }
+.dt-row-bar {
+  position: absolute;
+  /* 落在行左 padding（32rpx）的空隙内：既不被序号牌遮挡，也不占用内容宽度 */
+  left: 14rpx;
+  top: 24rpx;
+  width: 6rpx;
+  height: 64rpx;
+  border-radius: 3rpx;
+  background: #3370FF;
+}
+.dt-row-info { flex: 1; margin-left: 24rpx; min-width: 0; }
+.dt-row-edit { margin-left: 12rpx; font-size: 24rpx; color: #3370FF; flex-shrink: 0; }
+.dt-row-name { font-size: 30rpx; color: #1D2129; }
+.dt-row.mine .dt-row-name { font-weight: 600; }
+.dt-row-sub { font-size: 24rpx; color: #86909C; display: block; margin-top: 4rpx; }
+/* 「值日 N 次」三段对齐：中间数字占固定宽度并居中，单位数↔双位数不改变两侧文字的位置 */
+.cnt-num { display: inline-block; min-width: 46rpx; text-align: center; }
+/* 保洁角标 + 姓名行（让「保洁」紧贴姓名后，不挤占副标题） */
+.dt-row-namerow { display: flex; align-items: center; }
+.dt-clean-tag {
+  margin-left: 12rpx;
+  padding: 2rpx 12rpx;
+  font-size: 20rpx;
+  line-height: 1.4;
+  color: #FFFFFF;
+  background: #00B42A;
+  border-radius: 16rpx;
+  flex-shrink: 0;
+}
+
+.dt-person {
+  min-height: 128rpx;
+  padding: 16rpx 32rpx;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  border-bottom: 2rpx solid #F2F3F5;
+}
+.dt-person.mine { background: #F7F8FA; }
+.dt-person-count { font-size: 26rpx; color: #4E5969; margin-right: 16rpx; }
+/* 进度点个数随本周值日次数变化，宽度不定会把右侧「本周 N 次」顶得左右漂移；
+   固定一个够用的宽度（5 个点 = 90rpx，实际每人每周 0~2 次）让尾部计数对齐。 */
+.dt-progress { display: flex; flex-direction: row; margin-right: 12rpx; min-width: 90rpx; }
+.dt-block {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 2rpx;
+  background: #E5E6EB;
+  margin-right: 6rpx;
+}
+
+.dt-admin {
+  display: flex;
+  flex-direction: row;
+  padding: 8rpx 32rpx 0;
+  margin-bottom: 24rpx;
+}
+.dt-admin-btn {
+  height: 80rpx;
+  border-radius: 32rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  margin-right: 16rpx;
+  padding: 0 32rpx;
+}
+.dt-admin-btn.ghost { background: #F2F3F5; color: #4E5969; }
+.dt-admin-btn.primary { flex: 1; background: #3370FF; color: #FFFFFF; font-weight: 600; margin-right: 0; }
+.dt-admin-btn.danger { background: #FFECE8; color: #F53F3F; }
+.dt-admin-btn:active { opacity: 0.85; }
+
+/* 普通管理员提示：值日表的生成/发布仅超级管理员可操作 */
+/* v0.7.18 需求④：解释性文字一律**不带背景底色**，只作纯文字（用户口径「仅显示文字解释」）。
+   原来的暖黄底块会被读成「告警卡片」，但它只是一句说明 —— 去掉底与圆角，靠字色区分语气。 */
+.dt-admin-tip {
+  margin: 16rpx 32rpx 24rpx;
+  color: #D46B08;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+/* ---------- 合并行（1.0.4.4 #27） ----------
+   同一节课两/三人合成一行：名牌区横向排列（最多 3 张牌横排即可容纳，不需换行）；
+   课次组之间沿用细 hairline 分隔（.dt-row 自带 border-bottom），
+   这里只补名牌区的布局与「非首行课次」的呼吸感。 */
+.dt-row.merged { align-items: center; }
+.dt-names {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  /* 序号牌左沿与「按人视图 / 子明细行 / 成员弹层」统一对齐到卡片内容左沿（行 padding 32rpx），
+     不再额外缩进；名牌与右侧课次信息的间距由 .dt-row-info 的 margin-left 提供。 */
+  flex-shrink: 0;
+}
+.dt-names .avatar-tag { margin-right: 12rpx; }
+.dt-names .avatar-tag:last-child { margin-right: 0; }
+.dt-foot { height: 240rpx; }
+
+/* ---------- 合并行成员弹层（1.0.4.4 #27） ---------- */
+.dt-group { padding: 8rpx 0 24rpx; }
+.dt-group-row {
+  position: relative;
+  min-height: 112rpx;
+  padding: 16rpx 32rpx;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  border-bottom: 2rpx solid #F2F3F5;
+}
+.dt-group-row:last-child { border-bottom: none; }
+.dt-group-row.mine { background: #F0F5FF; }
+
+/* ---------- 一键生成 / AI 排班弹层 ---------- */
+.ai { padding: 8rpx 32rpx 48rpx; }
+/* v0.7.18 需求④：同上 —— 纯说明文字，不要底色 */
+.ai-tip {
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: #86909C;
+  margin-bottom: 24rpx;
+}
+.ai-input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 176rpx;
+  padding: 20rpx 24rpx;
+  background: #F7F8FA;
+  border-radius: 32rpx;
+  font-size: 28rpx;
+  line-height: 1.6;
+  color: #1D2129;
+}
+
+.ai-meta {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+}
+.ai-meta-k { color: #86909C; }
+.ai-meta-v { color: #1D2129; margin-left: 10rpx; flex: 1; }
+.ai-meta-link { color: #3370FF; }
+
+.ai-prompt { margin-top: 16rpx; }
+.ai-prompt-input {
+  width: 100%;
+  box-sizing: border-box;
+  max-height: 520rpx;
+  padding: 20rpx 24rpx;
+  background: #FFFFFF;
+  border: 2rpx solid #E5E6EB;
+  border-radius: 32rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: #4E5969;
+}
+.ai-prompt-reset {
+  display: inline-block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #3370FF;
+}
+
+.ai-nokey {
+  margin-top: 20rpx;
+  padding: 16rpx 20rpx;
+  background: #FFF7E8;
+  border-radius: 24rpx;
+  color: #D46B08;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.ai-actions {
+  display: flex;
+  flex-direction: row;
+  margin-top: 28rpx;
+}
+.ai-btn {
+  height: 88rpx;
+  border-radius: 32rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30rpx;
+  padding: 0 32rpx;
+  margin-right: 16rpx;
+}
+.ai-btn:last-child { margin-right: 0; }
+.ai-btn.ghost { background: #F2F3F5; color: #4E5969; }
+.ai-btn.primary { flex: 1; background: #3370FF; color: #FFFFFF; font-weight: 600; }
+.ai-btn.off { opacity: 0.5; }
+.ai-btn:active { opacity: 0.85; }
+
+.ai-result { margin-top: 32rpx; }
+.ai-result-head {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1D2129;
+  margin-bottom: 8rpx;
+}
+.ai-plan-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 2rpx solid #F2F3F5;
+}
+.ai-plan-when {
+  width: 200rpx;
+  flex-shrink: 0;
+  font-size: 26rpx;
+  color: #4E5969;
+}
+.ai-plan-right {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+}
+.ai-plan-who {
+  font-size: 27rpx;
+  color: #1D2129;
+  text-align: right;
+}
+.ai-plan-tag {
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  font-size: 20rpx;
+  color: #3370FF;
+  background: #F0F5FF;
+  border-radius: 6rpx;
+  padding: 2rpx 10rpx;
+}
+.ai-notes {
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  color: #4E5969;
+  line-height: 1.6;
+}
+.ai-warn {
+  display: flex;
+  flex-direction: column;
+  margin-top: 12rpx;
+  padding: 16rpx 20rpx;
+  background: #FFF7E8;
+  border-radius: 24rpx;
+}
+.ai-warn-line {
+  font-size: 23rpx;
+  color: #D46B08;
+  line-height: 1.6;
+}
+
+/* 「保持原样」的课次：视觉上明显区别于本次要重排的 */
+.ai-plan-row.kept { opacity: 0.62; }
+.ai-plan-row.kept .ai-plan-when { color: #86909C; }
+.ai-plan-tag.keep { color: #86909C; background: #F2F3F5; }
+
+/* 保洁（打扫 410）：不与普通课次混排，单独一块展示，避免被误认为「没排」 */
+.ai-clean {
+  margin-top: 20rpx;
+  padding: 16rpx 20rpx;
+  background: #F6FFED;
+  border: 1rpx solid #D6F5C8;
+  border-radius: 24rpx;
+}
+.ai-clean .ai-result-head { color: #0E8420; }
+.ai-plan-row.clean { border-bottom-color: #D6F5C8; }
+.ai-plan-row.clean .ai-plan-when { color: #0E8420; }
+.ai-plan-tag.clean { color: #0E8420; background: #E8FFEA; }
+
+/* 失败详情：以前这里什么都不显示，用户根本无从反馈 */
+.ai-err {
+  display: flex;
+  flex-direction: column;
+  margin-top: 20rpx;
+  padding: 20rpx 24rpx;
+  background: #FFECE8;
+  border: 1rpx solid #FFD9D5;
+  border-radius: 24rpx;
+}
+.ai-err-t {
+  font-size: 25rpx;
+  font-weight: 600;
+  color: #CF1322;
+}
+.ai-err-msg {
+  margin-top: 8rpx;
+  font-size: 23rpx;
+  color: #A8071A;
+  line-height: 1.6;
+  word-break: break-all;
+}
+.ai-err-bar { display: flex; margin-top: 16rpx; }
+.ai-err-btn {
+  margin-right: 28rpx;
+  font-size: 24rpx;
+  color: #3370FF;
+  padding: 6rpx 0;
+}
+.ai-err-btn:active { opacity: 0.6; }
+
+/* 自检面板 */
+.ai-diag {
+  margin-top: 20rpx;
+  padding: 18rpx 22rpx;
+  background: #F7F8FA;
+  border-radius: 24rpx;
+}
+.ai-diag-row { display: flex; margin-bottom: 8rpx; }
+.ai-diag-k {
+  flex-shrink: 0;
+  width: 190rpx;
+  font-size: 22rpx;
+  color: #86909C;
+}
+.ai-diag-v {
+  flex: 1;
+  font-size: 22rpx;
+  color: #1D2129;
+  word-break: break-all;
+}
+.ai-diag-v.err { color: #CF1322; }
+.ai-diag-copy {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 23rpx;
+  color: #3370FF;
+}
+.ai-diag-copy:active { opacity: 0.6; }
+
+/* ============ 教职工班级筛选（v0.7.16 需求⑧） ============
+   几何与 classes 页 .cl-fchip 同规格：chip-motion 基类管过渡，
+   选中态 padding/font-size 变大 = 布局真变大，邻项被平滑推开；
+   flex-wrap 支持小屏换行；保持顺序、不重叠。 */
+.dt-fchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+  padding: 0 28rpx 16rpx;
+}
+.dt-fchip {
+  flex: 0 0 auto;
+  padding: 8rpx 24rpx;
+  font-size: 24rpx;
+  line-height: 1.2;
+  color: var(--text-2);
+  background: rgba(255, 255, 255, 0.55);
+  border: 2rpx solid #E5E6EB;
+  border-radius: 999rpx;
+}
+.dt-fchip.on {
+  padding: 12rpx 32rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: var(--brand);
+  border-color: var(--brand);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dt-fchip { transition-duration: .01ms; }
+}
+
+/* ============ 加值日生弹层（v0.7.16 需求③） ============
+   ⚠️ cl-input / cl-sec / cl-staff-empty 是 classes 页的类名，**页面样式不共享**，
+   这里必须本地定义（check-wxss 会抓「用了但没定义」）。 */
+.dt-add { padding: 0 8rpx; }
+.dt-add .cl-input {
+  width: 100%;
+  padding: 18rpx 22rpx;
+  font-size: 27rpx;
+  background: #F7F8FA;
+  border-radius: 24rpx;
+  box-sizing: border-box;
+}
+.dt-add .cl-sec {
+  margin: 6rpx 0 16rpx;
+  font-size: 27rpx;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.dt-add .cl-staff-empty {
+  padding: 40rpx 0;
+  text-align: center;
+  font-size: 26rpx;
+  color: var(--text-3);
+}
+.dt-addrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  margin: 4rpx 24rpx 20rpx;
+  padding: 14rpx 0;
+  font-size: 26rpx;
+  color: var(--brand);
+  border: 2rpx dashed #A8C1FF;
+  border-radius: 24rpx;
+}
+.dt-add-sess {
+  display: flex;
+  align-items: center;
+  padding: 22rpx 24rpx;
+  margin-bottom: 12rpx;
+  background: #F7F8FA;
+  border-radius: 14rpx;
+}
+.dt-add-back {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  margin-bottom: 14rpx;
+  font-size: 26rpx;
+  color: var(--brand);
+}
+.dt-add-kw { margin-bottom: 16rpx; }
+.dt-add-mem {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 20rpx;
+  margin-bottom: 10rpx;
+  background: #F7F8FA;
+  border-radius: 14rpx;
+}
+.dt-add-mem.taken { opacity: 0.5; }
+.dt-add-taken {
+  flex: 0 0 auto;
+  font-size: 24rpx;
+  color: var(--text-3);
+}
+
+/* ---------- 「已结束」入口 + 弹层（2026-10-04 需求） ----------
+ * 本周早于今天的日子不进「按日」主列表，收进「已结束」弹层。 */
+/* 按日/按人 同一行：左 segmented、右入口（仅按日且本周有已结束日子时渲染） */
+.dt-modebar { display: flex; flex-direction: row; align-items: center; justify-content: space-between; }
+.dt-ended {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 56rpx;
+  padding: 0 20rpx;
+  font-size: 24rpx;
+  color: var(--brand, #3370FF);
+  background: #F0F5FF;
+  border-radius: 999rpx;
+}
+.dt-ended text { margin-right: 6rpx; }
+/* 今天起没有安排时的说明（否则按日会一片空白） */
+.dt-ended-empty {
+  margin: 0 32rpx 24rpx;
+  padding: 48rpx 0;
+  text-align: center;
+  font-size: 24rpx;
+  color: var(--text-3, #86909C);
+}
+/* 弹层内列表：日期卡自带左右 32rpx 外边距，这里只补上下留白 */
+.dt-ended-list { padding: 8rpx 0 24rpx; }

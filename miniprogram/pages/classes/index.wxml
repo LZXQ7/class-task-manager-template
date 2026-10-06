@@ -1,0 +1,315 @@
+<!-- 防滚动穿透（v0.7.9）：弹层里的 scroll-view 滑到下沿后，touchmove 会继续冒泡给 page，
+     「在弹层里滑到底 → 后面的页面跟着一起滑」就是这么来的。
+     page-meta 的 page-style 是官方/社区验证的锁页面滚动方案（Vant Weapp 的 popup 同款）。
+     ⚠️ 新增 / 改名的弹层 show 标志必须同步进下面表达式，否则 scripts/check-scroll-lock.js 会报错。 -->
+<page-meta page-style="{{(createShow || renameShow || qrShow || wbShow || importShow || staffMgrShow) ? 'overflow:hidden' : ''}}"></page-meta>
+
+<view class="page cl page-fade">
+
+  <nav-bar title="班级管理" show-back="{{true}}" custom-back="{{true}}" bind:back="onBack" />
+
+  <view wx:if="{{loading}}" class="cl-empty">加载中…</view>
+
+  <block wx:else>
+    <!-- 顶部教职工筛选（v0.7.16 需求②，仅超管）：全部 / 各教职工；
+         选中某教职工 = 只看 TA 绑定的班级。chip-motion：padding/font-size 过渡让邻项平滑让位；
+         flex-wrap 允许小屏换行（图③规格：不重叠、不跳变、保持顺序）。 -->
+    <view wx:if="{{isSuper && staffChips.length > 1}}" class="cl-fchips">
+      <view
+        wx:for="{{staffChips}}"
+        wx:key="id"
+        class="cl-fchip chip-motion {{staffFilterId === item.id ? 'on' : ''}}"
+        data-id="{{item.id}}"
+        bindtap="onStaffFilter"
+        hover-class="press-dim"
+        hover-stay-time="60"
+      >{{item.name}}</view>
+    </view>
+
+    <!-- 班级卡片列表（可左滑删除；仅超管/辅导员有删除按钮） -->
+    <view
+      wx:for="{{classes}}"
+      wx:key="id"
+      class="cl-swipe"
+    >
+      <view
+        wx:if="{{canDelete}}"
+        class="cl-del {{item.offset ? 'on' : ''}}"
+        bindtap="onDeleteClass"
+        data-id="{{item.id}}"
+        data-name="{{item.name}}"
+        hover-class="cl-del-hover"
+        hover-stay-time="60"
+      >
+        <app-icon name="trash" variant="red" size="{{34}}" />
+        <text class="cl-deltxt">删除</text>
+      </view>
+      <view
+        class="cl-card {{item.isMine && !isCounselor ? 'mine' : ''}} {{item.isActive ? '' : 'off'}}"
+        style="transform: translateX({{item.offset || 0}}rpx);{{item.noAnim ? '' : 'transition: transform .2s ease;'}}"
+        data-idx="{{index}}"
+        data-id="{{item.id}}"
+        bindtouchstart="onSwipeStart"
+        bindtouchmove="onSwipeMove"
+        bindtouchend="onSwipeEnd"
+        bindtouchcancel="onSwipeEnd"
+      >
+        <view class="cl-head">
+          <view class="cl-name">
+            <text>{{item.name}}</text>
+            <!-- 辅导员管理所有班级，不区分「本班」 -->
+            <text wx:if="{{item.isMine && !isCounselor}}" class="cl-tag mine">本班</text>
+            <text wx:if="{{!item.isActive}}" class="cl-tag off">已停用</text>
+          </view>
+          <view wx:if="{{isSuper && item.isMine}}" class="cl-toggle" data-id="{{item.id}}" bindtap="onToggleActive" hover-class="press-dim" hover-stay-time="60">{{item.isActive ? '停用' : '启用'}}</view>
+        </view>
+        <view class="cl-meta">
+          <text>口令 {{item.joinToken}}</text>
+          <text>邀请码 {{item.inviteCode}}</text>
+          <text>{{item.termStart}} 开学 · {{item.totalWeeks}} 周</text>
+        </view>
+        <!-- 手势用 bind（不是 catch）：与「通知」一致，避免 catchtouchstart 吞掉子按钮的 tap -->
+        <view class="cl-actions">
+          <view class="cl-btn primary" data-id="{{item.id}}" data-name="{{item.name}}" bindtap="onViewMembers">查看人员</view>
+        </view>
+        <view class="cl-actions">
+          <view class="cl-btn" data-id="{{item.id}}" bindtap="onShowQr">邀请码 / 入班码</view>
+          <view class="cl-btn" data-id="{{item.id}}" bindtap="onOpenImport">导入名单</view>
+          <view wx:if="{{canCreate}}" class="cl-btn" data-id="{{item.id}}" data-name="{{item.name}}" bindtap="onRename">改名</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 筛选空态：选中的教职工还没有绑定任何班级 -->
+    <view wx:if="{{!classes.length && staffFilterId}}" class="cl-empty">该教职工还未绑定班级，点「教职工管理」给 TA 绑班</view>
+    <view wx:if="{{!classes.length && !staffFilterId}}" class="cl-empty">暂无班级</view>
+
+    <!-- 新建班级（超管 / 辅导员）/ 整表批量导入（超管 / 辅导员）/ 教职工管理（仅超管） -->
+    <view wx:if="{{canCreate}}" class="cl-add" bindtap="onOpenCreate" hover-class="cl-add-hover" hover-stay-time="60">
+      <app-icon name="plus" variant="white" size="{{36}}" />
+      <text>新建班级</text>
+    </view>
+
+    <view wx:if="{{canCross}}" class="cl-import" bindtap="onWbOpen" hover-class="cl-import-hover" hover-stay-time="60">
+      <app-icon name="download" variant="brand" size="{{34}}" />
+      <text>批量导入名单（一张表含多个班级）</text>
+    </view>
+
+    <!-- 教职工管理独立入口（v0.7.16 需求①，仅超管）：
+         添加 / 解绑 / 删除教职工账号，把班级多选绑给教职工；不再挂在单个班级下面 -->
+    <view wx:if="{{isSuper}}" class="cl-import" bindtap="onOpenStaffMgr" hover-class="cl-import-hover" hover-stay-time="60">
+      <app-icon name="people" variant="brand" size="{{34}}" />
+      <text>教职工管理（添加 / 绑定班级 / 解绑）</text>
+    </view>
+  </block>
+
+  <!-- 新建班级弹层 -->
+  <bottom-sheet show="{{createShow}}" title="新建班级" bind:close="onCloseCreate">
+    <view class="cl-form">
+      <view class="cl-field">
+        <view class="cl-label">班级名</view>
+        <input class="cl-input" value="{{createName}}" placeholder="如：2604班" placeholder-class="f-ph" bindinput="onCreateName" />
+      </view>
+      <view class="cl-field">
+        <view class="cl-label">开学日期</view>
+        <input class="cl-input" value="{{createTermStart}}" placeholder="YYYY-MM-DD" placeholder-class="f-ph" bindinput="onCreateTerm" />
+      </view>
+      <view class="cl-field">
+        <view class="cl-label">学期周数</view>
+        <input class="cl-input" type="number" value="{{createTotalWeeks}}" bindinput="onCreateWeeks" />
+      </view>
+      <view class="cl-actions-bar">
+        <view class="cl-btn-ghost" bindtap="onCloseCreate">取消</view>
+        <view class="cl-btn-primary {{createBusy ? 'busy' : ''}}" bindtap="onCreateSubmit">{{createBusy ? '创建中…' : '创建班级'}}</view>
+      </view>
+    </view>
+  </bottom-sheet>
+
+  <!-- 改名弹层（超管 / 辅导员） -->
+  <bottom-sheet show="{{renameShow}}" title="修改班级名" bind:close="onCloseRename">
+    <view class="cl-form">
+      <view class="cl-field">
+        <view class="cl-label">班级名</view>
+        <input class="cl-input" value="{{renameName}}" placeholder="班级名称" maxlength="64" bindinput="onRenameInput" />
+      </view>
+      <view class="cl-actions-bar">
+        <view class="cl-btn-ghost" bindtap="onCloseRename">取消</view>
+        <view class="cl-btn-primary {{renameBusy ? 'busy' : ''}}" bindtap="onRenameSubmit">{{renameBusy ? '保存中…' : '保存'}}</view>
+      </view>
+    </view>
+  </bottom-sheet>
+
+  <!-- 邀请码 / 入班码弹层 -->
+  <bottom-sheet show="{{qrShow}}" title="{{qrClass.name}} · 加入方式" bind:close="onCloseQr">
+    <view class="cl-qr">
+      <view class="cl-qr-row">
+        <text class="cl-qr-label">班级口令</text>
+        <text class="cl-qr-val">{{qrClass.joinToken}}</text>
+        <view class="cl-copy" bindtap="onCopyToken" hover-class="press-dim" hover-stay-time="60">复制</view>
+        <view class="cl-random" bindtap="onRandomToken" hover-class="press-dim" hover-stay-time="60">随机</view>
+      </view>
+      <view class="cl-qr-row">
+        <text class="cl-qr-label">数字邀请码</text>
+        <text class="cl-qr-val">{{qrClass.inviteCode}}</text>
+        <view class="cl-copy" bindtap="onCopyInvite" hover-class="press-dim" hover-stay-time="60">复制</view>
+      </view>
+      <view class="cl-qr-box">
+        <image wx:if="{{qrImg}}" class="cl-qr-img" src="{{qrImg}}" mode="aspectFit" show-menu-by-longpress />
+        <view wx:elif="{{qrLoading}}" class="cl-qr-ph">入班码生成中…</view>
+        <view wx:else class="cl-qr-ph">{{qrError || '入班码生成失败'}}</view>
+      </view>
+      <text wx:if="{{qrImg && qrEnv === 'trial'}}" class="cl-qr-env">当前是体验版码，只有「体验成员」扫码能进；正式版发布后会自动换成正式码</text>
+      <text class="cl-qr-tip">同学可扫码，或直接输入上面的口令 / 邀请码加入本班</text>
+    </view>
+  </bottom-sheet>
+
+  <!-- 教职工管理（v0.7.16 重构，仅超管）：全局账号 + 班级多选绑定
+       添加：录姓名 + 职位 + 勾班级 → 生成 8 位一次性绑定码（明文只出现这一次）
+       行内：绑班（多选编辑器）/ 生成码·重发 / 解绑微信 / 删除 -->
+  <bottom-sheet show="{{staffMgrShow}}" title="教职工管理" height="{{1240}}" bind:close="onCloseStaffMgr">
+    <view class="cl-form">
+      <view class="cl-field">
+        <view class="cl-label">姓名</view>
+        <input class="cl-input" value="{{staffName}}" placeholder="如：王老师" maxlength="16" placeholder-class="f-ph" bindinput="onStaffName" />
+      </view>
+      <view class="cl-field">
+        <view class="cl-label">职位</view>
+        <input class="cl-input" value="{{staffPosition}}" placeholder="如：辅导员" maxlength="16" placeholder-class="f-ph" bindinput="onStaffPosition" />
+      </view>
+      <view class="cl-field">
+        <view class="cl-label">绑定班级（可多选，之后可改）</view>
+        <view class="cl-chips">
+          <view
+            wx:for="{{classes}}"
+            wx:key="id"
+            class="cl-bchip chip-motion {{staffCreatePicks[item.id] ? 'on' : ''}}"
+            data-id="{{item.id}}"
+            bindtap="onStaffCreatePick"
+          >{{item.name}}</view>
+        </view>
+      </view>
+      <view class="cl-actions-bar">
+        <view class="cl-btn-primary {{staffBusy ? 'busy' : ''}}" bindtap="onAddStaff">{{staffBusy ? '生成中…' : '添加并生成绑定码'}}</view>
+      </view>
+
+      <!-- 码明文只在这次响应里出现：后端只存码、不回码，关掉弹层后想再看只能「重发」 -->
+      <view wx:if="{{staffCodeShow}}" class="cl-code">
+        <view class="cl-code-head">{{staffCodeName}} 的绑定码</view>
+        <view class="cl-code-val">{{staffCode}}</view>
+        <view class="cl-copy cl-code-copy" bindtap="onCopyStaffCode" hover-class="press-dim" hover-stay-time="60">复制绑定码</view>
+        <view class="cl-code-tip">{{staffCodeHours}} 小时内有效，且只能用一次。把码给到本人，他在绑定页选「我是老师 / 辅导员」输入即可进入。</view>
+      </view>
+
+      <view class="cl-sec">全部教职工（{{staffList.length}}）</view>
+      <view wx:for="{{staffList}}" wx:key="id" class="cl-staff">
+        <view class="cl-staff-main">
+          <view class="cl-staff-name">{{item.name}}<text wx:if="{{item.position}}" class="cl-staff-pos">{{item.position}}</text></view>
+          <view class="cl-staff-meta">
+            <text wx:if="{{item.bound}}" class="cl-staff-ok">已绑定</text>
+            <text wx:elif="{{item.hasCode}}" class="cl-staff-wait">绑定码待用 · 有效至 {{item.codeExpireText}}</text>
+            <text wx:else class="cl-staff-none">未生成绑定码</text>
+            <text class="cl-staff-cls">{{item.classIds.length ? '管 ' + item.classIds.length + ' 个班' : '未绑班'}}</text>
+          </view>
+        </view>
+        <view class="cl-staff-ops">
+          <view wx:if="{{!item.bound}}" class="cl-staff-btn" data-id="{{item.id}}" bindtap="onIssueStaffCode">{{item.hasCode ? '重发' : '生成码'}}</view>
+          <view class="cl-staff-btn" data-id="{{item.id}}" bindtap="onStaffBindEdit">{{bindEditId === item.id ? '收起' : '绑班'}}</view>
+          <view wx:if="{{item.bound}}" class="cl-staff-btn warn" data-id="{{item.id}}" bindtap="onStaffUnbind">解绑</view>
+          <view wx:if="{{!item.bound}}" class="cl-staff-btn warn" data-id="{{item.id}}" bindtap="onStaffDelete">删除</view>
+        </view>
+
+        <!-- 行内绑班编辑器：班级多选 chip，保存 = 全量覆写该教职工的 staff_class 映射 -->
+        <view wx:if="{{bindEditId === item.id}}" class="cl-bind-edit">
+          <view class="cl-chips">
+            <view
+              wx:for="{{classes}}"
+              wx:for-item="c"
+              wx:key="id"
+              class="cl-bchip chip-motion {{bindDraft[c.id] ? 'on' : ''}}"
+              data-id="{{c.id}}"
+              bindtap="onStaffBindPick"
+            >{{c.name}}</view>
+          </view>
+          <view class="cl-actions-bar">
+            <view class="cl-btn-ghost" bindtap="onStaffBindEdit">取消</view>
+            <view class="cl-btn-primary {{staffBusy ? 'busy' : ''}}" bindtap="onStaffBindSave">{{staffBusy ? '保存中…' : '保存绑定'}}</view>
+          </view>
+        </view>
+      </view>
+      <view wx:if="{{!staffList.length}}" class="cl-staff-empty">还没有教职工，在上方添加后会在这里出现</view>
+
+      <text class="cl-tip">教职工是全局账号，不属于某个班：在这里把班级多选绑给 TA，TA 就只能看到这些班。绑定后的教职工可发布通知、查看值日、管理备注；超级管理员能力（解绑他人 / 生成发布值日表）不含在内。</text>
+    </view>
+  </bottom-sheet>
+
+  <!-- 整表批量导入：一张表含多个班级 → 自动识别 / 自动建班 / 已有的比对后跳过 -->
+  <bottom-sheet show="{{wbShow}}" title="批量导入名单" height="{{1200}}" bind:close="onWbClose">
+    <view class="cl-form">
+
+      <block wx:if="{{wbPhase === 'input'}}">
+        <view class="cl-pick {{wbBusy ? 'busy' : ''}}" bindtap="onWbPickFile">
+          <app-icon name="download" variant="brand" size="{{34}}" />
+          <text>从聊天选择 Excel / CSV 文件</text>
+        </view>
+        <text wx:if="{{wbFileName}}" class="cl-file">已选择：{{wbFileName}}</text>
+        <view wx:if="{{wbErr}}" class="cl-err">{{wbErr}}</view>
+        <text class="cl-tip">适合「一张表含好几个班」的名单：系统按班级列自动分组、按学号前缀归位；库里已有的班级会先比对（姓名与分组都一致就跳过，有差异才更新），没有的班级自动新建。若文件列表是空的，先把表格发给「文件传输助手」再回来选。</text>
+        <view wx:if="{{wbResult}}" class="cl-result">
+          新增 {{wbResult.imported}} 人 · 更新 {{wbResult.updated}} 人 · 无需变动 {{wbResult.unchanged}} 人 · 跳过 {{wbResult.skipped}} 人<block wx:if="{{wbResult.createdClasses.length}}"> · 新建 {{wbResult.createdClasses.length}} 个班级</block>
+        </view>
+        <view class="cl-actions-bar">
+          <view class="cl-btn-ghost" bindtap="onWbClose">取消</view>
+          <view class="cl-btn-primary {{wbBusy ? 'busy' : ''}}" bindtap="onWbParse">{{wbBusy ? '解析中…' : '解析并预览'}}</view>
+        </view>
+      </block>
+
+      <block wx:else>
+        <view class="cl-sec">确认要导入的班级（共 {{wbGroups.length}} 组）</view>
+        <view wx:for="{{wbGroups}}" wx:key="label" class="cl-g {{item.include ? 'on' : ''}}">
+          <view class="cl-g-chk {{item.include ? 'on' : ''}}" data-i="{{index}}" bindtap="onWbToggle">{{item.include ? '✓' : ''}}</view>
+          <view class="cl-g-main">
+            <view class="cl-g-label">{{item.label || '（未标注班级）'}}</view>
+            <view class="cl-g-meta">→ {{item.willCreate ? '将新建' : (item.className || '未匹配')}} · {{item.count}} 人</view>
+            <view wx:if="{{item.willCreate}}" class="cl-g-edit">
+              <text class="cl-g-edit-lbl">班级名</text>
+              <input class="cl-g-input" value="{{item.createName}}" placeholder="班级名称" maxlength="30" data-i="{{index}}" bindinput="onWbNameInput" />
+            </view>
+            <view wx:if="{{item.conflict}}" class="cl-g-warn">班号与学号前缀不一致，请改用「查看人员 → 导入名单」逐班处理</view>
+            <view wx:elif="{{item.weak}}" class="cl-g-warn">仅按班号匹配，可能是同班号的不同专业，请确认后再勾选</view>
+            <block wx:else>
+              <view class="cl-g-stat">新增 {{item.stat.fresh}} · 有差异 {{item.stat.diff}} · 已一致 {{item.stat.same}} · 归它班 {{item.stat.other}}</view>
+              <view wx:if="{{item.stat.fresh === 0 && item.stat.diff === 0 && item.stat.same > 0}}" class="cl-g-ok">该班成员已存在且完全一致，无需导入（已自动跳过）</view>
+            </block>
+            <view wx:if="{{item.willCreate && item.stat.fresh === 0 && item.stat.diff === 0}}" class="cl-g-warn">该组所有成员的学号都已属于其它班级，勾选后只会新建「空班级」、不导入任何人。通常应导入到已有班级而非新建，请确认是否要新建。</view>
+          </view>
+        </view>
+        <view wx:if="{{!wbGroups.length}}" class="cl-empty">没有解析到有效名单</view>
+        <view class="cl-actions-bar">
+          <view class="cl-btn-ghost" bindtap="onWbBack">返回</view>
+          <view class="cl-btn-primary {{wbBusy ? 'busy' : ''}}" bindtap="onWbConfirm">{{wbBusy ? '导入中…' : '确认导入'}}</view>
+        </view>
+      </block>
+    </view>
+  </bottom-sheet>
+
+  <!-- 单个班级导入（粘贴） -->
+  <bottom-sheet show="{{importShow}}" title="导入名单" bind:close="onCloseImport">
+    <view class="cl-form">
+      <textarea
+        class="cl-area"
+        value="{{importText}}"
+        placeholder="每行一条：姓名,学号（示例：张三,20230101）"
+        placeholder-class="f-ph"
+        bindinput="onImportText"
+        maxlength="-1"
+      />
+      <text class="cl-tip">每行一条：姓名,学号；学号尾号奇数为 A 组，偶数为 B 组</text>
+      <text wx:if="{{importResult}}" class="cl-result">{{importResult}}</text>
+      <view class="cl-actions-bar">
+        <view class="cl-btn-ghost" bindtap="onCloseImport">取消</view>
+        <view class="cl-btn-primary {{importBusy ? 'busy' : ''}}" bindtap="onImportSubmit">{{importBusy ? '导入中…' : '解析并导入'}}</view>
+      </view>
+    </view>
+  </bottom-sheet>
+
+</view>

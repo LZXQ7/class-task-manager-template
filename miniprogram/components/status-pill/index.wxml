@@ -1,0 +1,4 @@
+<view
+  class="pill pill-{{size}}"
+  style="color:{{fg}};background:{{bg}}"
+>{{label}}</view>

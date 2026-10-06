@@ -1,0 +1,211 @@
+/* P5 · 手动排班 */
+.ms { min-height: 100vh; padding-bottom: 0; }
+.ms-nav-hint { font-size: 26rpx; color: #86909C; padding: 0 16rpx; }
+.f-ph { color: #C9CDD4; font-size: 28rpx; }
+
+/* 卡片统一用全局玻璃材质（app.wxss .card）；本页不再覆写成纯白，
+   与「我的」页下方卡片保持一致（v0.7.19 需求③） */
+.card {
+  background: var(--glass-bg);
+  border: 1rpx solid var(--glass-edge);
+  border-radius: var(--r-md);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  overflow: hidden;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .card { background: rgba(255, 255, 255, 0.9); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .card { background: #FFFFFF; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* v0.7.18 需求④：纯说明文字，去底色与圆角 */
+.ms-tip {
+  margin: 16rpx 32rpx 8rpx;
+  font-size: 23rpx;
+  line-height: 1.6;
+  color: #3370FF;
+}
+
+/* ---------- 日期卡 ---------- */
+.ms-day { margin: 16rpx 32rpx 24rpx; }
+.ms-dayhead {
+  height: 80rpx;
+  padding: 0 32rpx;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2rpx solid #F2F3F5;
+}
+.ms-daytitle { font-size: 30rpx; font-weight: 600; color: #1D2129; }
+.ms-daysub { font-size: 24rpx; color: #86909C; }
+
+/* ---------- 课次 ---------- */
+.ms-sess {
+  padding: 20rpx 32rpx 4rpx;
+  border-bottom: 2rpx solid #F2F3F5;
+}
+.ms-sess:last-child { border-bottom: none; }
+.ms-sesshead {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.ms-sess-title {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #1D2129;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ms-sess-group {
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  font-size: 20rpx;
+  color: #7C5CFF;
+  background: #F3F0FF;
+  border-radius: 6rpx;
+  padding: 2rpx 10rpx;
+}
+.ms-sess-count {
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  font-size: 22rpx;
+  color: #86909C;
+}
+.ms-sess-count.ok { color: #00B42A; }
+.ms-sess-sub {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: #86909C;
+}
+
+/* ---------- 已排同学 / 添加 ---------- */
+.ms-chips {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  padding: 16rpx 0 20rpx;
+}
+.ms-chip {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 72rpx;
+  padding: 0 16rpx 0 8rpx;
+  margin: 0 16rpx 16rpx 0;
+  background: #F7F8FA;
+  border: 2rpx solid #E5E6EB;
+  border-radius: 999rpx;
+}
+.ms-chip:active { opacity: 0.7; }
+.ms-chip-name {
+  margin: 0 4rpx 0 12rpx;
+  font-size: 26rpx;
+  color: #1D2129;
+  max-width: 180rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ms-add {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  height: 72rpx;
+  padding: 0 24rpx;
+  margin: 0 16rpx 16rpx 0;
+  border: 2rpx dashed #C9CDD4;
+  border-radius: 999rpx;
+}
+.ms-add:active { background: #F7F8FA; }
+.ms-add-text { margin-left: 8rpx; font-size: 26rpx; color: #86909C; }
+
+/* ---------- 底部固定条 ---------- */
+.ms .page-foot-space { height: 220rpx; }
+.ms-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 20rpx 32rpx calc(20rpx + env(safe-area-inset-bottom));
+  background: #FFFFFF;
+  border-top: 2rpx solid #F2F3F5;
+  box-shadow: 0 -4rpx 16rpx rgba(29,33,41,0.04);
+}
+.ms-bar-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 24rpx;
+  color: #86909C;
+}
+.ms-bar-btn {
+  flex-shrink: 0;
+  height: 80rpx;
+  padding: 0 40rpx;
+  border-radius: 32rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+}
+.ms-bar-btn.primary { background: #3370FF; color: #FFFFFF; font-weight: 600; }
+.ms-bar-btn.ghost { background: #F2F3F5; color: #4E5969; }
+.ms-bar-btn:active { opacity: 0.85; }
+
+/* ---------- 选人弹层 ---------- */
+.pk { padding: 8rpx 32rpx 48rpx; }
+.pk-search {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 76rpx;
+  padding: 0 24rpx;
+  background: #F7F8FA;
+  border-radius: 32rpx;
+}
+.pk-search-input {
+  flex: 1;
+  min-width: 0;
+  margin-left: 12rpx;
+  font-size: 28rpx;
+  color: #1D2129;
+}
+.pk-search-clear { font-size: 26rpx; color: #3370FF; padding-left: 16rpx; }
+.pk-gap { padding: 16rpx 4rpx 8rpx; }
+.pk-gap-text { font-size: 22rpx; color: #86909C; line-height: 1.6; }
+
+.pk-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 2rpx solid #F2F3F5;
+}
+.pk-row:active { background: #F7F8FA; }
+.pk-row.off { opacity: 0.45; }
+.pk-info { flex: 1; min-width: 0; margin-left: 20rpx; }
+.pk-name { font-size: 29rpx; color: #1D2129; }
+.pk-sub { display: block; margin-top: 4rpx; font-size: 22rpx; color: #86909C; }
+.pk-badge {
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  font-size: 21rpx;
+  border-radius: 999rpx;
+  padding: 6rpx 16rpx;
+}
+.pk-badge.warn { color: #D46B08; background: #FFF3E8; }
+.pk-badge.bad { color: #86909C; background: #F2F3F5; }

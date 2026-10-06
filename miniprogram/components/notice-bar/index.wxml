@@ -1,0 +1,8 @@
+<view class="nb" style="background:{{bg}}">
+  <app-icon name="{{icon}}" variant="{{variant}}" size="{{40}}" />
+  <view class="nb-text" style="color:{{color}}">{{text}}</view>
+  <view wx:if="{{btnText}}" class="nb-btn" style="color:{{iconColor}};background:rgba(255,255,255,0.7)" bindtap="onBtn">{{btnText}}</view>
+  <view wx:if="{{closable}}" class="nb-close" bindtap="onClose">
+    <app-icon name="close" variant="gray" size="{{32}}" />
+  </view>
+</view>

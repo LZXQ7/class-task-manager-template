@@ -1,0 +1,663 @@
+/* P7 · 我的 */
+.mn {
+  padding-bottom: 40rpx;
+  /* 主内容滚动交给 spring-scroll（v0.7.19 需求④）；根不再原生滚动 */
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.mn-scroll { display: block; }
+
+/* 用户信息 */
+.mn-user {
+  display: flex;
+  align-items: center;
+  margin: 24rpx 32rpx 0;
+  padding: 32rpx;
+  /* 玻璃材质，与全站卡片统一（v0.7.19 需求③） */
+  background: var(--glass-bg);
+  border: 1rpx solid var(--glass-edge);
+  border-radius: 40rpx;
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .mn-user { background: rgba(255, 255, 255, 0.9); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .mn-user { background: #FFFFFF; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+.mn-user-info {
+  flex: 1;
+  min-width: 0;
+  margin-left: 24rpx;
+  display: flex;
+  flex-direction: column;
+}
+.mn-user-line {
+  display: flex;
+  align-items: center;
+}
+.mn-user-name {
+  font-size: 40rpx;
+  line-height: 56rpx;
+  font-weight: 600;
+  color: #1D2129;
+}
+.mn-bind {
+  margin-left: 12rpx;
+  padding: 0 12rpx;
+  height: 36rpx;
+  line-height: 36rpx;
+  font-size: 20rpx;
+  color: #00B42A;
+  background: #E8FFEA;
+  border-radius: 999rpx;
+}
+.mn-user-sub {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  line-height: 34rpx;
+  color: #86909C;
+}
+.mn-admin {
+  padding: 0 16rpx;
+  height: 44rpx;
+  line-height: 44rpx;
+  font-size: 22rpx;
+  font-weight: 500;
+  color: #3370FF;
+  background: #F0F5FF;
+  border-radius: 999rpx;
+}
+/* 超管：标黄区分普通管理员 */
+.mn-admin.super {
+  color: #D46B08;
+  background: #FFF3C2;
+}
+/* 班委（蓝，与 .mn-admin 默认一致）；辅导员（青） */
+.mn-admin.committee {
+  color: #3370FF;
+  background: #F0F5FF;
+}
+.mn-admin.counselor {
+  color: #0AA5A8;
+  background: #E8FFFB;
+}
+/* 头像点击层：包一层 80x80 相对定位容器，button 透明绝对铺满其上。
+   button 与视觉完全隔离（默认 width≈184px / 背景 / 边框全都不再影响布局），
+   点击仍落在 button 上触发 chooseAvatar 面板。 */
+.avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 80rpx;
+  height: 80rpx;
+}
+.avatar-btn {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  font-size: 0;
+  line-height: 1;
+  overflow: hidden;
+}
+.avatar-btn::after {
+  border: none;
+}
+
+/* 统计 */
+.mn-stat {
+  display: flex;
+  margin: 24rpx 32rpx 0;
+  padding: 28rpx 0;
+}
+.mn-stat-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+.mn-stat-cell + .mn-stat-cell::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8rpx;
+  bottom: 8rpx;
+  width: 2rpx;
+  background: #F2F3F5;
+}
+.mn-num {
+  font-size: 48rpx;
+  line-height: 60rpx;
+  font-weight: 700;
+  color: #1D2129;
+}
+.mn-num.warn {
+  color: #FF7D00;
+}
+.mn-label {
+  margin-top: 4rpx;
+  font-size: 24rpx;
+  line-height: 34rpx;
+  color: #86909C;
+}
+/* 待值日 / 已结束 可点开明细（需求）：点击查看具体值日条目；本学期为纯展示不可点 */
+.mn-stat-cell.tappable {
+  cursor: pointer;
+}
+.mn-stat-go {
+  position: absolute;
+  top: 6rpx;
+  right: 14rpx;
+  font-size: 28rpx;
+  line-height: 1;
+  color: #C9CDD4;
+}
+.mn-stat-cell.tappable:active .mn-num,
+.mn-stat-cell.tappable:active .mn-label {
+  opacity: 0.6;
+}
+
+/* 卡片组 */
+.mn-card {
+  margin: 24rpx 32rpx 0;
+}
+.mn-row {
+  display: flex;
+  align-items: center;
+  height: 112rpx;
+  padding: 0 32rpx;
+  position: relative;
+}
+.mn-row + .mn-row::before {
+  content: '';
+  position: absolute;
+  left: 32rpx;
+  right: 0;
+  top: 0;
+  height: 2rpx;
+  background: #F2F3F5;
+}
+.mn-row-text {
+  flex: 1;
+  min-width: 0;
+  margin-left: 20rpx;
+  font-size: 30rpx;
+  line-height: 44rpx;
+  color: #1D2129;
+}
+.mn-row-done {
+  font-size: 26rpx;
+  color: #86909C;
+}
+.mn-mini-btn {
+  padding: 0 20rpx;
+  height: 56rpx;
+  line-height: 56rpx;
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #FFFFFF;
+  background: #3370FF;
+  border-radius: 999rpx;
+}
+.mn-mini-btn:active {
+  background: #245BDB;
+}
+.mn-mini-tag {
+  padding: 0 12rpx;
+  height: 36rpx;
+  line-height: 36rpx;
+  font-size: 20rpx;
+  color: #3370FF;
+  background: #F0F5FF;
+  border-radius: 16rpx;
+}
+/* 「模拟中」橙色变体（切换测试账号时显示） */
+.mn-mini-tag.warn {
+  color: #FF7D00;
+  background: #FFF7E8;
+}
+/* 「绑定入口开放中」绿色小标签 */
+.mn-mini-tag.ok {
+  color: #00B42A;
+  background: #E8FFEA;
+}
+/* 仅超管可见的入口（如手动排班）用金色标 */
+.mn-mini-tag.super {
+  color: #D46B08;
+  background: #FFF3C2;
+}
+/* 班委（蓝）/ 辅导员（青）：与 .mn-admin 三色一致，挂在入口行表示当前用户职位 */
+.mn-mini-tag.committee {
+  color: #3370FF;
+  background: #F0F5FF;
+}
+.mn-mini-tag.counselor {
+  color: #0AA5A8;
+  background: #E8FFFB;
+}
+/* 「换班待确认」的条数角标 */
+.mn-badge {
+  min-width: 36rpx;
+  height: 36rpx;
+  padding: 0 10rpx;
+  margin-right: 12rpx;
+  line-height: 36rpx;
+  text-align: center;
+  font-size: 22rpx;
+  color: #FFFFFF;
+  background: #F53F3F;
+  border-radius: 999rpx;
+  box-sizing: border-box;
+}
+
+/* 解除绑定（已禁用，仅提示） */
+.mn-unbind {
+  margin: 40rpx 32rpx 0;
+  height: 96rpx;
+  line-height: 96rpx;
+  text-align: center;
+  font-size: 30rpx;
+  color: #F53F3F;
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);
+}
+.mn-unbind:active {
+  background: #FFECE8;
+}
+/* v0.7.18 需求④：纯说明文字，去底色与圆角 */
+.mn-unbind-hint {
+  margin: 40rpx 32rpx 0;
+  text-align: center;
+  font-size: 26rpx;
+  line-height: 40rpx;
+  color: #86909C;
+}
+.mn-foot {
+  height: 180rpx;
+}
+
+/* ============ 我的申请 ============ */
+.ap-item {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 32rpx;
+  position: relative;
+}
+.ap-item + .ap-item::before {
+  content: '';
+  position: absolute;
+  left: 32rpx;
+  right: 32rpx;
+  top: 0;
+  height: 2rpx;
+  background: #F2F3F5;
+}
+.ap-info {
+  flex: 1;
+  min-width: 0;
+  margin-left: 20rpx;
+}
+.ap-title {
+  font-size: 28rpx;
+  line-height: 40rpx;
+  font-weight: 500;
+  color: #1D2129;
+}
+.ap-sub {
+  margin-top: 4rpx;
+  font-size: 24rpx;
+  line-height: 34rpx;
+  color: #86909C;
+}
+.ap-status {
+  flex-shrink: 0;
+  padding: 0 16rpx;
+  height: 44rpx;
+  line-height: 44rpx;
+  font-size: 22rpx;
+  border-radius: 999rpx;
+}
+.ap-actions {
+  display: flex;
+  flex-shrink: 0;
+  margin-left: 16rpx;
+}
+.ap-btn {
+  padding: 0 20rpx;
+  height: 56rpx;
+  line-height: 56rpx;
+  font-size: 24rpx;
+  color: #4E5969;
+  background: #F2F3F5;
+  border-radius: 999rpx;
+  /* 申请处理按钮按下反馈（v0.7.14 · #5④）：缩放 + 淡入回弹 */
+  transition: opacity .08s ease, transform .08s ease;
+}
+.ap-btn + .ap-btn {
+  margin-left: 12rpx;
+}
+.ap-btn.primary {
+  color: #FFFFFF;
+  background: #3370FF;
+}
+.ap-btn:active {
+  opacity: 0.8;
+  transform: scale(0.95);
+}
+/* 超管的「待我确认」分组标题 */
+.ap-sect {
+  padding: 20rpx 32rpx 12rpx;
+  font-size: 24rpx;
+  color: #86909C;
+}
+/* 待确认条目：浅底，与「我的申请」列表区分开 */
+.ap-item.pending {
+  background: #FBFCFE;
+}
+
+/* ============ 关于 P8 ============ */
+.ab-wrap {
+  padding: 40rpx 32rpx 56rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.ab-logo {
+  width: 128rpx;
+  height: 128rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #F0F5FF;
+  border-radius: 40rpx;
+}
+.ab-name {
+  margin-top: 20rpx;
+  font-size: 34rpx;
+  line-height: 48rpx;
+  font-weight: 600;
+  color: #1D2129;
+}
+.ab-ver {
+  margin-top: 4rpx;
+  font-size: 24rpx;
+  line-height: 34rpx;
+  color: #86909C;
+}
+.ab-card {
+  width: 100%;
+  margin-top: 32rpx;
+  padding: 24rpx;
+  background: #F7F8FA;
+  border-radius: 24rpx;
+}
+.ab-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 88rpx;
+  font-size: 28rpx;
+  color: #1D2129;
+}
+.ab-row + .ab-row {
+  border-top: 2rpx solid #F2F3F5;
+}
+.ab-foot {
+  margin-top: 40rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.ab-foot text {
+  font-size: 22rpx;
+  line-height: 34rpx;
+  color: #C9CDD4;
+}
+/* 微信提醒「额度已用完」的行尾提示（v0.7.15）：沿用本页告警色，与左侧橙色铃铛同色 */
+.mn-row-warn {
+  color: #FF7D00;
+}
+
+/* ---------- 发送更新公告（v0.7.25，仅超管） ---------- */
+.an-wrap {
+  padding: 24rpx 32rpx 48rpx;
+  display: flex;
+  flex-direction: column;
+}
+.an-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 24rpx;
+}
+.an-label {
+  display: block;
+  font-size: 24rpx;
+  line-height: 1.4;
+  color: #86909C;
+  margin-bottom: 12rpx;
+}
+/* ⚠️ input 组件必须给显式 height：只给 padding 时盒子塌陷，
+   占位文字垂直居中溢出、向上盖住 label（真机实拍 2026-09-27）。
+   ⚠️ 垂直方向不能给 padding：小程序 input 的内层输入域会整体被 padding-top
+   往下推、而内部文字仍按自身高度居中 → **文字视觉靠下**（2026-09-27 实测）。
+   居中交给 height（88rpx）+ 无垂直 padding 的标准写法。 */
+.an-input {
+  display: block;
+  width: 100%;
+  height: 88rpx;
+  box-sizing: border-box;
+  background: #FFFFFF;
+  border: 2rpx solid rgba(229, 230, 235, 0.9);
+  border-radius: 20rpx;
+  padding: 0 24rpx;
+  font-size: 28rpx;
+  color: #1D2129;
+}
+/* 本页本地定义（勿借别页类名 —— 页面 wxss 不跨页共享） */
+.f-ph { color: #C9CDD4; }
+.an-textarea {
+  background: #FFFFFF;
+  border: 2rpx solid rgba(229, 230, 235, 0.9);
+  border-radius: 20rpx;
+  padding: 20rpx 24rpx;
+  font-size: 28rpx;
+  color: #1D2129;
+  width: 100%;
+  min-height: 240rpx;
+  box-sizing: border-box;
+}
+.an-tip {
+  font-size: 22rpx;
+  color: #86909C;
+  line-height: 1.6;
+  margin-bottom: 20rpx;
+}
+
+/* 预设服务商 chips：点选即填好接口地址 + 默认模型 */
+.an-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+.an-preset {
+  padding: 12rpx 30rpx;
+  border-radius: 28rpx;
+  font-size: 26rpx;
+  color: #8B5CF6;
+  background: rgba(236, 72, 153, 0.08);
+  border: 2rpx solid rgba(236, 72, 153, 0.22);
+  box-sizing: border-box;
+}
+.an-preset.on {
+  color: #FFFFFF;
+  background: linear-gradient(135deg, #EC4899, #8B5CF6);
+  border-color: transparent;
+}
+
+/* 模型名输入 + 「获取」按钮 同一行 */
+.an-model-row {
+  display: flex;
+  align-items: center;
+}
+.an-model-row .an-input {
+  flex: 1;
+  width: auto;
+  margin-right: 16rpx;
+}
+.an-fetch {
+  flex: none;
+  height: 88rpx;
+  padding: 0 32rpx;
+  border-radius: 44rpx;
+  box-sizing: border-box;
+  background: #FFFFFF;
+  border: 2rpx solid rgba(236, 72, 153, 0.35);
+  color: #EC4899;
+  font-size: 28rpx;
+  font-weight: 600;
+  /* 文字居中必须用 flex 双轴（与 .an-btn 同款）：line-height 撑高在真机会偏 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.an-fetch.busy { opacity: 0.6; }
+
+/* 「获取」拉回的模型列表（可滚动，点击即选） */
+.an-models-scroll {
+  max-height: 320rpx;
+  margin-top: 16rpx;
+}
+.an-models-hint {
+  font-size: 22rpx;
+  color: #86909C;
+  margin-bottom: 12rpx;
+}
+.an-model {
+  padding: 16rpx 22rpx;
+  border-radius: 16rpx;
+  font-size: 26rpx;
+  color: #1D2129;
+  background: rgba(31, 38, 135, 0.05);
+  border: 2rpx solid transparent;
+  margin-bottom: 12rpx;
+  word-break: break-all;
+}
+.an-model.on {
+  color: #EC4899;
+  background: rgba(236, 72, 153, 0.08);
+  border-color: rgba(236, 72, 153, 0.5);
+}
+.an-btn {
+  height: 88rpx;
+  border-radius: 44rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: linear-gradient(135deg, #EC4899, #8B5CF6);
+}
+.an-btn.busy { opacity: 0.6; }
+/*
+ * 两个按钮**左右并排**（需求：原来上下各占满一行、零间距，糊成一片且分不出主次）。
+ * 主次靠**实心 vs 描边**区分：主行动实心渐变，次行动描边留白。
+ * ⚠️ 只在本容器里 `flex:1` —— 公告弹层那一个按钮不受影响（仍是整行宽）。
+ * ⚠️ 不用 `gap`：用相邻兄弟 margin，兼容更老的基础库。
+ */
+.an-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-top: 8rpx;
+}
+.an-actions .an-btn { flex: 1; }
+.an-actions .an-btn + .an-btn { margin-left: 20rpx; }
+/* 次要行动：描边 + 留白，与主行动的实心渐变形成明显对比 */
+.an-btn.ghost {
+  color: #EC4899;
+  background: #FFFFFF;
+  border: 2rpx solid rgba(236, 72, 153, 0.35);
+  box-sizing: border-box;
+}
+
+/* ============ 值日明细（待值日 / 已结束 可点开） ============ */
+.dl { padding: 8rpx 32rpx 32rpx; }
+.dl-item {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 0;
+  position: relative;
+}
+.dl-item + .dl-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2rpx;
+  background: #F2F3F5;
+}
+.dl-date {
+  flex-shrink: 0;
+  width: 156rpx;
+  font-size: 26rpx;
+  line-height: 36rpx;
+  color: #4E5969;
+}
+.dl-info { flex: 1; min-width: 0; margin-left: 20rpx; }
+.dl-line1 {
+  display: flex;
+  align-items: center;
+}
+.dl-course {
+  flex: 1;
+  min-width: 0;
+  font-size: 30rpx;
+  line-height: 44rpx;
+  font-weight: 500;
+  color: #1D2129;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dl-line2 {
+  margin-top: 4rpx;
+  font-size: 24rpx;
+  line-height: 34rpx;
+  color: #86909C;
+}
+.dl-tag {
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  padding: 0 14rpx;
+  height: 36rpx;
+  line-height: 36rpx;
+  font-size: 20rpx;
+  border-radius: 999rpx;
+}
+.dl-tag.pending { color: #FF7D00; background: #FFF7E8; }
+.dl-tag.ongoing { color: #3370FF; background: #F0F5FF; }
+.dl-tag.expired { color: #86909C; background: #F2F3F5; }
+.dl-tag.done    { color: #00B42A; background: #E8FFEA; }
+.dl-loading,
+.dl-empty {
+  padding: 48rpx 0;
+  text-align: center;
+  font-size: 26rpx;
+  line-height: 40rpx;
+  color: #86909C;
+}

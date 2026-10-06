@@ -1,0 +1,220 @@
+<page-meta page-style="{{(recycleShow || viewerShow) ? 'overflow:hidden' : ''}}"></page-meta>
+<view class="page nt page-fade">
+
+  <!-- 非 Tab 二级页：左上角必须有返回键（show-back） -->
+  <nav-bar title="通知" show-back="{{true}}" />
+
+  <!-- 微信服务通知授权入口：只在「模板上线 + 未开启 + 总开关没关」时显示，
+       微信通知正常（已授权）的用户不再看到这一行 -->
+  <view wx:if="{{showSubTip}}" class="nt-tipbar">
+    <app-icon name="bell" variant="brand" size="{{36}}" />
+    <text class="nt-tiptext">开启后，班委发布通知会同时给你的微信发一条服务通知</text>
+    <view wx:if="{{remindOn}}" class="nt-tipdone">已开启</view>
+    <view wx:else class="nt-tipbtn" bindtap="onRemind">开启</view>
+  </view>
+
+  <skeleton wx:if="{{loading}}" type="card" rows="{{3}}" height="{{220}}" />
+
+  <empty-state
+    wx:elif="{{failed}}"
+    icon="cloud-off"
+    title="通知没加载出来"
+    desc="检查网络后重试"
+    btn-text="重新加载"
+    bind:action="onReload"
+    padding="{{140}}"
+  />
+
+  <empty-state
+    wx:elif="{{!list.length}}"
+    icon="empty-box"
+    title="还没有通知"
+    desc="班委发布的通知会出现在这里"
+    padding="{{140}}"
+  />
+
+  <block wx:else>
+    <view
+      wx:for="{{list}}"
+      wx:key="id"
+      class="nt-wrap {{item.flying ? 'nt-fly-x' : ''}}"
+      style="{{item.wrapStyle}}"
+    >
+      <!-- 「飞入回收站」分两层走：外层 .nt-wrap **线性**走横向，内层 .nt-item
+           **ease-in（越走越快）**走纵向 —— 两条不同的时序曲线合成出来就是一条弧线。
+           放在同一个元素上做不到：X 与 Y 只能共用一条 transition-timing-function，
+           出来就是一条直线（这正是需求里「曲线路径」的关键）。 -->
+      <view class="nt-item {{item.flying ? 'nt-fly-y' : ''}}" style="{{item.flyStyle}}">
+      <!-- 左滑露出的删除区（位于卡片右侧后方）
+           ⚠️ 必须按滑动量决定可见性（v0.7.24）：卡片是**半透明玻璃**，删除区的粉底会隔着它
+           透上来 —— 未左滑时卡片本就完整盖住删除区，可玻璃一透明，静止状态就变成「卡片右半边
+           泛粉」。offset 为 0 时挂不上 on，区间整块透明；手指往左一带（offset<0）才显形。 -->
+      <view class="nt-del-zone {{item.offset ? 'on' : ''}}" data-id="{{item.id}}" data-index="{{index}}" bindtap="onDelete" hover-class="nt-del-hover" hover-stay-time="60">
+        <app-icon name="trash" variant="red" size="{{34}}" />
+        <text class="nt-deltxt">删除</text>
+      </view>
+
+      <!-- 卡片本体（随手势左移露出删除区） -->
+      <view
+        class="nt-card card"
+        style="transform: translateX({{item.offset || 0}}px); transition: {{item.swiping ? 'none' : 'transform .2s ease'}};"
+        data-index="{{index}}"
+        data-id="{{item.id}}"
+        bindtouchstart="onSwipeStart"
+        bindtouchmove="onSwipeMove"
+        bindtouchend="onSwipeEnd"
+        bindtouchcancel="onSwipeEnd"
+      >
+        <view class="nt-head">
+          <text class="nt-title">{{item.titleText}}</text>
+          <view class="nt-head-right">
+            <view wx:if="{{item.needAck && !item.isPublisher}}" class="nt-acktag {{item.acked ? 'on' : ''}}">
+              {{item.acked ? '已收到' : '待收到'}}
+            </view>
+          </view>
+        </view>
+
+        <view class="nt-meta">
+          {{item.publisherName}} · {{item.createdAt}} · {{item.scopeText}}
+        </view>
+
+        <!-- 正文（需求⑥ + v0.7.13）：
+             · .nt-body 是**裁剪层**，max-height 由 JS 按实测高度下发并做过渡
+               → 高度连续变化，下方内容自然下移（不是「摘了 clamp 一下子弹到位」）；
+             · .nt-content 只在**折叠静止态**挂 line-clamp（为的是省略号），
+               展开 / 收起动画期间必须摘掉 —— 挂着 clamp 内容高度就被钉死在 3 行，
+               高度动不起来，动画等于没有。
+             折叠只裁显示，从不截断字符串 —— 展开即原样显示，不丢字 -->
+        <view class="nt-body" style="{{item.fold ? 'max-height:' + item.bodyH + 'rpx' : ''}}">
+          <view class="nt-content {{item.fold && item.clamped ? 'is-fold' : ''}}">{{item.content}}</view>
+        </view>
+        <view
+          wx:if="{{item.fold}}"
+          class="nt-fold"
+          data-index="{{index}}"
+          bindtap="onToggleFold"
+          hover-class="press-dim"
+          hover-start-time="0"
+          hover-stay-time="60"
+        >
+          <text class="nt-fold-txt">{{item.expanded ? '收起' : '展开全文'}}</text>
+          <!-- 同一个箭头旋转到新状态（v0.7.13）：不再换成另一个图标 -->
+          <view class="nt-fold-arrow {{item.expanded ? 'on' : ''}}">
+            <app-icon name="chevron-down" variant="gray" size="{{26}}" />
+          </view>
+        </view>
+
+        <!-- 金山文档等外链：小程序打不开浏览器页面，只能复制后到浏览器打开 -->
+      <view wx:if="{{item.linkUrl}}" class="nt-link" data-url="{{item.linkUrl}}" bindtap="onLink">
+        <app-icon name="arrow-right" variant="gray" size="{{32}}" />
+        <text class="nt-linktext">{{item.linkLabel}}</text>
+        <text class="nt-linkhint">点击打开</text>
+      </view>
+
+        <!-- 配图（v0.7.14）：缩略图行，点击走 shared-element 展开动画（截图②） -->
+        <view wx:if="{{item.images.length}}" class="nt-imgs">
+          <view
+            wx:for="{{item.images}}"
+            wx:key="*this"
+            wx:for-item="img"
+            class="nt-img"
+            id="nimg-{{item.id}}-{{index}}"
+            data-nid="{{item.id}}"
+            data-i="{{index}}"
+            bindtap="onViewImages"
+            hover-class="press-dim"
+            hover-start-time="0"
+            hover-stay-time="60"
+          >
+            <image class="nt-img-pic" src="{{img}}" mode="aspectFill" />
+          </view>
+        </view>
+
+        <!-- 回执可见性（需求②）：仅发布人本人 / 超管能看确认人数与确认人序号。
+             与「确认收到」按钮**共存**而不是互斥（旧版 wx:if/wx:elif 互斥导致看不到按钮）。
+             ⚠️ 发布者本人不显示按钮（isPublisher 由后端返回）：自己发的通知不需要自己确认，
+             「已收到 x/y」的分母也已排除发布者（56 人班级 → 0/55） -->
+        <view wx:if="{{item.canSeeAck || (item.needAck && !item.acked && !item.isPublisher)}}" class="nt-foot">
+          <view wx:if="{{item.canSeeAck}}" class="nt-ackinfo">
+            <text class="nt-acknum">已收到 {{item.ackText}}</text>
+            <view wx:if="{{item.ackSeqPreview}}" class="nt-acklist">
+              <text class="nt-ackchip">{{item.ackSeqPreview}}号</text>
+              <text wx:if="{{item.ackMore}}" class="nt-ackmore">+{{item.ackMore}}</text>
+            </view>
+          </view>
+          <view wx:if="{{item.needAck && !item.acked && !item.isPublisher}}" class="nt-btn" data-id="{{item.id}}" bindtap="onAck">确认收到</view>
+        </view>
+      </view>
+      </view>
+    </view>
+    <view class="nt-space"></view>
+  </block>
+
+  <!-- 清理入口（2026-09-25）：只对「测试超管」（99 段测试账号）显示，真实超管不可清线上数据 -->
+  <view wx:if="{{canClear && !loading}}" class="nt-clear" hover-class="press-dim" hover-start-time="0" hover-stay-time="60" bindtap="onClearAll">
+    清空全部通知（测试数据）
+  </view>
+
+  <!-- 回收站入口（v0.7.13 需求②）：右下角常驻，删除的卡片就是飞向这里。
+       ⚠️ 它是 position: fixed，绝不能挪进任何带 transform 的容器
+       （transform 会给 fixed 后代建包含块，它会跟着那个盒子飘，而不是贴在视口右下角）。 -->
+  <view
+    wx:if="{{!loading && !failed}}"
+    class="nt-trash {{trashPulse ? 'on' : ''}}"
+    bindtap="onTrashOpen"
+    hover-class="press-dim"
+    hover-start-time="0"
+    hover-stay-time="60"
+  >
+    <app-icon name="trash" variant="gray" size="{{40}}" />
+    <view wx:if="{{recycleCount}}" class="nt-trash-badge">{{recycleCount}}</view>
+  </view>
+
+  <!-- 回收站：列出我删掉的通知，可一键恢复（删除是软删除，恢复 = 撤掉那一条标记）。
+       v0.7.16 需求⑤：头部加「清空」—— 彻底移除全部软删行，二次确认，清了不可再恢复。 -->
+  <bottom-sheet show="{{recycleShow}}" title="回收站" height="{{900}}" bind:close="onTrashClose">
+    <view class="rc-wrap">
+      <view wx:if="{{recycleList.length}}" class="rc-clear" bindtap="onRecycleClear" hover-class="press-dim" hover-start-time="0" hover-stay-time="60">
+        <app-icon name="trash" variant="red" size="{{30}}" />
+        <text>清空回收站（{{recycleCount}}）</text>
+      </view>
+      <view wx:if="{{!recycleList.length}}" class="rc-empty">
+        <app-icon name="empty-box" variant="gray" size="{{80}}" />
+        <text class="rc-empty-txt">回收站是空的</text>
+        <text class="rc-empty-sub">左滑一条通知点「删除」，它会飞到这里</text>
+      </view>
+      <!-- 回收站卡片（v0.7.14）：只显示标题 + 单行内容，恢复按钮常驻右侧 -->
+      <view wx:for="{{recycleList}}" wx:key="id" class="rc-item">
+        <view class="rc-main">
+          <text class="rc-title">{{item.titleText}}</text>
+          <text class="rc-content">{{item.content}}</text>
+        </view>
+        <view
+          class="rc-restore"
+          data-id="{{item.id}}"
+          bindtap="onRestore"
+          hover-class="press-dim"
+          hover-start-time="0"
+          hover-stay-time="60"
+        >恢复</view>
+      </view>
+    </view>
+  </bottom-sheet>
+
+  <!-- 图片查看器（v0.7.14，截图② Shared-element Image Expansion）：
+       点击缩略图 → 图片从缩略图位置连续放大到全屏；关闭时反向缩回原位置。
+       ⚠️ 必须放在所有滚动/transform 容器之外（position:fixed 顶层），否则会被卡片的
+       transform 包含块带跑。入场分两拍 setData（先挂到缩略图位置、下一帧再给目标值），
+       合并成一次就不会有过渡（同其它动效踩过的坑）。 -->
+  <view wx:if="{{viewerShow}}" class="nt-viewer">
+    <view class="nt-vbg" style="opacity:{{viewerBg}}" bindtap="onViewerClose"></view>
+    <view class="nt-vimg {{viewerAnim ? 'anim' : ''}}" style="{{viewerStyle}}">
+      <image class="nt-vimg-pic" src="{{viewerImages[viewerIndex]}}" mode="aspectFit" bindtap="onViewerClose" />
+    </view>
+    <view wx:if="{{viewerImages.length > 1}}" class="nt-vnav nt-vprev" bindtap="onViewerPrev" hover-class="press-dim" hover-stay-time="60">‹</view>
+    <view wx:if="{{viewerImages.length > 1}}" class="nt-vnav nt-vnext" bindtap="onViewerNext" hover-class="press-dim" hover-stay-time="60">›</view>
+    <view wx:if="{{viewerImages.length > 1}}" class="nt-vdots">
+      <view wx:for="{{viewerImages}}" wx:key="*this" class="nt-vdot {{index === viewerIndex ? 'on' : ''}}"></view>
+    </view>
+  </view>
+</view>

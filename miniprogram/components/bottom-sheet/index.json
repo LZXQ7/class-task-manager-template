@@ -1,0 +1,7 @@
+{
+  "component": true,
+  "usingComponents": {
+    "app-icon": "../app-icon/index",
+    "spring-scroll": "../spring-scroll/index"
+  }
+}

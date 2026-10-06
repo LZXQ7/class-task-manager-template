@@ -1,0 +1,5 @@
+<view class="stepper">
+  <view class="sp-btn {{value <= min ? 'off' : ''}}" bindtap="onMinus">−</view>
+  <view class="sp-num">{{value}}</view>
+  <view class="sp-btn {{value >= max ? 'off' : ''}}" bindtap="onPlus">＋</view>
+</view>

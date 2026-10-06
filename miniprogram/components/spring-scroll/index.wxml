@@ -1,0 +1,26 @@
+<!--
+  可复用「边界阻尼滚动」容器（v1.0.5 追加 scaleY 拉伸 + 下拉刷新指示器）
+  - 替代原生 scroll-view 的 bounces=false（硬停 + 无惯性）。
+  - 实现物理：spring 回位 / 边界 rubber-banding / 全程 momentum / 可打断 / scaleY 拉伸 / 下拉刷新。
+  - 子元素原生 bindtap / picker 不受影响：达到拖拽阈值才进入拖拽，否则按 tap 处理。
+  - 只动 transform（translate3d + scaleY）+ opacity，绝不动 height/margin（否则每帧重排卡顿）。
+-->
+<view
+  class="ss-viewport"
+  bindtouchstart="onStart"
+  catchtouchmove="onMove"
+  bindtouchend="onEnd"
+  bindtouchcancel="onEnd"
+>
+  <!-- 下拉刷新指示器：位于拉出的空间里，随拉伸跟手移动（transform-only，无跳变） -->
+  <view class="ss-indicator" style="transform: translate3d(0, {{_indY}}px, 0); opacity: {{_indOpacity}};">
+    <view class="ss-ring {{_spin ? 'spin' : ''}}"></view>
+  </view>
+
+  <view
+    class="ss-content"
+    style="transform: translate3d(0, {{_offset}}px, 0) scaleY({{_scale}}); transform-origin: {{_origin}};"
+  >
+    <slot></slot>
+  </view>
+</view>

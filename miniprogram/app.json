@@ -1,0 +1,41 @@
+{
+  "pages": [
+    "pages/home/index",
+    "pages/timetable/index",
+    "pages/duty/index",
+    "pages/mine/index",
+    "pages/bind/index",
+    "pages/manual/index",
+    "pages/doc/index",
+    "pages/notice/index",
+    "pages/webview/index",
+    "pages/roster/index",
+    "pages/classes/index",
+    "pages/timetable-apply/index"
+  ],
+  "window": {
+    "navigationStyle": "custom",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F5F6F8",
+    "backgroundTextStyle": "dark",
+    "enablePullDownRefresh": false
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#C9CDD4",
+    "selectedColor": "#3370FF",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      { "pagePath": "pages/home/index", "text": "首页" },
+      { "pagePath": "pages/timetable/index", "text": "课程表" },
+      { "pagePath": "pages/duty/index", "text": "值日" },
+      { "pagePath": "pages/mine/index", "text": "我的" }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents",
+  "renderer": "webview"
+}

@@ -1,0 +1,490 @@
+/* ============================================================
+ * P9 · 班级管理（多班级 §43）
+ * 观感统一到全局设计令牌：卡片=var(--bg-card)+var(--shadow-1)，
+ * 弹层表单刻度与「发布通知」(.np-*) / 「导入名单」(.im-*) 一致。
+ * ============================================================ */
+.page.cl {
+  padding: 24rpx 32rpx 120rpx;
+}
+
+.cl-empty {
+  padding: 120rpx 0;
+  text-align: center;
+  font-size: 26rpx;
+  color: var(--text-3);
+}
+
+/* ---------- 左滑容器 + 删除按钮（观感对齐「通知」左滑删除：留间距 + 圆角） ----------
+ * ⚠️ 裁切层必须自带与卡片**同值**的圆角（v0.7.24，与通知页 .nt-item 同族）：
+ *   卡片的 border-radius 管不住父级 overflow:hidden 的方形裁切边界，
+ *   两者之间那圈对角带会残留卡片自己的投影 → 四角显成四块偏暗的方形色斑。
+ * ⚠️ 外投影（--shadow-1）同理要上提到这里：留在卡片上会被方形裁切整圈切掉。 */
+.cl-swipe {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-1);
+  margin-bottom: 24rpx;
+}
+/* 删除按钮：藏在卡片右侧，左滑卡片后露出（仅超管/辅导员渲染）。
+ * 上下右各留 12rpx 间距，圆角 20rpx —— 与「通知」的 .nt-del-zone 同款观感。
+ * opacity 由滑动量驱动：卡片是半透明白，粉底会隔着它透上来，
+ * 静止时必须整块透明，只有真的往左带了才显形（与通知页同一处理）。 */
+.cl-del {
+  position: absolute;
+  top: 12rpx;
+  right: 12rpx;
+  bottom: 12rpx;
+  width: 128rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--danger);
+  background: #FFECE8;
+  border-radius: 32rpx;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity .16s ease;
+}
+.cl-del.on { opacity: 1; }
+.cl-del.cl-del-hover { opacity: .85; }
+.cl-deltxt { margin-top: 8rpx; font-size: 24rpx; line-height: 32rpx; }
+
+/* ---------- 班级卡片 ---------- */
+/* 外投影已上提到 .cl-swipe（见上），这里不再重复画 —— 否则投影会被方形裁切切掉、
+   只留下四角缺口里那圈残留。 */
+.cl-card {
+  position: relative;
+  z-index: 2;
+  padding: 32rpx;
+  background: rgba(255, 255, 255, 0.55);
+  border: 2rpx solid transparent;
+  border-radius: var(--r-md);
+}
+.cl-card.mine { border-color: var(--brand); }
+.cl-card.off { opacity: .55; }
+
+.cl-head { display: flex; flex-direction: row; align-items: center; justify-content: space-between; }
+.cl-name {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.cl-tag {
+  margin-left: 16rpx;
+  padding: 4rpx 12rpx;
+  font-size: 22rpx;
+  border-radius: var(--r-sm);
+}
+.cl-tag.mine { color: var(--brand); background: var(--brand-light); }
+.cl-tag.off { color: var(--text-3); background: var(--bg-fill); }
+
+.cl-toggle { padding: 8rpx 20rpx; font-size: 26rpx; color: var(--danger); }
+
+.cl-meta { display: flex; flex-direction: row; flex-wrap: wrap; margin-top: 16rpx; }
+.cl-meta text {
+  margin: 0 24rpx 8rpx 0;
+  font-size: 24rpx;
+  color: var(--text-2);
+}
+
+.cl-actions { display: flex; flex-direction: row; margin-top: 24rpx; }
+.cl-actions + .cl-actions { margin-top: 16rpx; }
+.cl-btn {
+  flex: 1;
+  height: 72rpx;
+  line-height: 72rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: var(--brand);
+  background: var(--brand-light);
+  border-radius: var(--r-md);
+}
+.cl-btn + .cl-btn { margin-left: 20rpx; }
+.cl-btn:active { background: #DCE8FF; }
+/* 「查看人员」主操作：实心品牌色，与上面两个浅底次操作区分主次 */
+.cl-btn.primary { color: #FFFFFF; background: var(--brand); }
+.cl-btn.primary:active { background: var(--brand-press); }
+
+/* 新建班级主按钮（列表底部，与 .btn 同刻度） */
+.cl-add {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  height: 96rpx;
+  margin-top: 8rpx;
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #FFFFFF;
+  background: var(--brand);
+  border-radius: var(--r-md);
+}
+.cl-add text { margin-left: 12rpx; }
+.cl-add-hover { background: var(--brand-press); }
+
+/* 整表批量导入入口（白底描边，与实心「新建班级」区分主次） */
+.cl-import {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  height: 96rpx;
+  margin-top: 20rpx;
+  font-size: 28rpx;
+  color: var(--brand);
+  background: rgba(255, 255, 255, 0.55);
+  border: 2rpx solid #D6E0FF;
+  border-radius: var(--r-md);
+}
+.cl-import text { margin-left: 10rpx; }
+.cl-import-hover { background: var(--brand-light); }
+
+/* 批量导入弹层 */
+.cl-pick {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  height: 96rpx;
+  margin-bottom: 16rpx;
+  font-size: 28rpx;
+  color: var(--brand);
+  background: rgba(255, 255, 255, 0.55);
+  border: 2rpx solid #D6E0FF;
+  border-radius: 32rpx;
+}
+.cl-pick text { margin-left: 10rpx; }
+.cl-pick:active { background: var(--brand-light); }
+.cl-pick.busy { opacity: .6; }
+.cl-file { display: block; margin-bottom: 8rpx; font-size: 24rpx; color: var(--success); }
+/* 解析失败的原始原因（原样展示，方便定位） */
+.cl-err {
+  margin-bottom: 12rpx;
+  padding: 16rpx 20rpx;
+  font-size: 24rpx;
+  line-height: 34rpx;
+  color: var(--danger);
+  background: #FFECE8;
+  border-radius: 24rpx;
+  word-break: break-all;
+}
+
+.cl-sec { margin: 8rpx 0 20rpx; font-size: 26rpx; color: var(--text-2); }
+
+.cl-g {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  background: #F7F8FA;
+  border: 2rpx solid var(--line-2);
+  border-radius: 32rpx;
+}
+.cl-g.on { border-color: var(--brand); background: var(--brand-light); }
+.cl-g-chk {
+  flex-shrink: 0;
+  width: 44rpx;
+  height: 44rpx;
+  margin-right: 20rpx;
+  line-height: 44rpx;
+  text-align: center;
+  font-size: 28rpx;
+  color: #FFFFFF;
+  background: #FFFFFF;
+  border: 2rpx solid var(--text-4);
+  border-radius: 20rpx;
+}
+.cl-g-chk.on { background: var(--brand); border-color: var(--brand); }
+.cl-g-main { flex: 1; min-width: 0; }
+.cl-g-label { font-size: 28rpx; color: var(--text-1); word-break: break-all; }
+.cl-g-meta { margin-top: 6rpx; font-size: 24rpx; color: var(--text-2); }
+.cl-g-edit { margin-top: 10rpx; display: flex; align-items: center; }
+.cl-g-edit-lbl { font-size: 24rpx; color: var(--text-3); margin-right: 14rpx; flex: 0 0 auto; }
+.cl-g-input {
+  flex: 1 1 auto; min-width: 0;
+  padding: 10rpx 16rpx; font-size: 26rpx; color: var(--text-1);
+  background: rgba(0,0,0,0.03); border: 1rpx solid var(--line); border-radius: 24rpx;
+}
+
+.cl-g-stat { margin-top: 8rpx; font-size: 22rpx; line-height: 32rpx; color: var(--text-3); }
+.cl-g-warn { margin-top: 8rpx; font-size: 22rpx; line-height: 32rpx; color: #FF7D00; }
+.cl-g-ok { margin-top: 8rpx; font-size: 22rpx; line-height: 32rpx; color: var(--success); }
+
+/* ---------- 弹层表单（与 .np / .im 同刻度） ---------- */
+.cl-form { padding: 8rpx 32rpx 40rpx; }
+.cl-field { margin-top: 28rpx; }
+.cl-field:first-child { margin-top: 4rpx; }
+.cl-label {
+  display: block;
+  margin-bottom: 12rpx;
+  font-size: 26rpx;
+  color: var(--text-2);
+}
+.cl-input {
+  height: 92rpx;
+  padding: 0 24rpx;
+  background: #F7F8FA;
+  border-radius: 32rpx;
+  font-size: 28rpx;
+  color: var(--text-1);
+}
+.cl-area {
+  width: 100%;
+  height: 320rpx;
+  padding: 24rpx;
+  background: #F7F8FA;
+  border: 2rpx solid var(--line-2);
+  border-radius: 32rpx;
+  font-size: 26rpx;
+  line-height: 40rpx;
+  color: var(--text-1);
+}
+.cl-tip {
+  display: block;
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  line-height: 34rpx;
+  color: var(--text-3);
+}
+.cl-result { display: block; margin-top: 16rpx; font-size: 26rpx; color: var(--success); }
+
+/* 动作按钮行：取消（ghost）+ 主操作（primary） */
+.cl-actions-bar { display: flex; flex-direction: row; margin-top: 40rpx; }
+.cl-btn-ghost {
+  flex: 0 0 200rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  margin-right: 16rpx;
+  font-size: 28rpx;
+  color: var(--text-2);
+  background: var(--bg-fill);
+  border-radius: 32rpx;
+}
+.cl-btn-primary {
+  flex: 1;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: var(--brand);
+  border-radius: 32rpx;
+}
+.cl-btn-primary.busy { background: var(--brand-disable); }
+.cl-btn-ghost:active { opacity: .85; }
+.cl-btn-primary:active { opacity: .85; }
+
+/* ---------- 邀请码 / 入班码弹层 ---------- */
+.cl-qr { padding: 8rpx 32rpx 40rpx; }
+.cl-qr-row { display: flex; flex-direction: row; align-items: center; margin-bottom: 24rpx; }
+.cl-qr-label { width: 176rpx; font-size: 26rpx; color: var(--text-2); }
+.cl-qr-val { flex: 1; font-size: 30rpx; font-weight: 600; color: var(--text-1); }
+.cl-copy { padding: 8rpx 16rpx; font-size: 26rpx; color: var(--brand); }
+/* 「随机」重置口令（超管 / 辅导员）：与「复制」并排的次级操作 */
+.cl-random {
+  margin-left: 8rpx;
+  padding: 8rpx 18rpx;
+  font-size: 24rpx;
+  color: var(--brand);
+  background: var(--brand-light);
+  border-radius: 999rpx;
+}
+.cl-qr-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 360rpx;
+  height: 360rpx;
+  margin: 24rpx auto;
+  background: var(--bg-fill);
+  border-radius: 32rpx;
+  overflow: hidden;
+}
+.cl-qr-img { width: 360rpx; height: 360rpx; }
+.cl-qr-ph { padding: 0 24rpx; font-size: 26rpx; color: var(--text-3); text-align: center; }
+.cl-qr-tip { display: block; text-align: center; font-size: 24rpx; color: var(--text-3); }
+/* 体验版码提示：只有体验成员能扫 → 用警示色单独一行 */
+.cl-qr-env {
+  display: block;
+  margin-bottom: 12rpx;
+  text-align: center;
+  font-size: 22rpx;
+  line-height: 30rpx;
+  color: #D46B08;
+}
+
+/* ---------- 教职工一次性绑定码（2026-09-26） ----------
+ * 码只明文出现一次（生成 / 重发的那次响应），所以给足视觉权重：
+ * 大号等宽 + 拉开字距，方便抄写或口头念给老师。 */
+.cl-code {
+  margin-top: 24rpx;
+  padding: 24rpx;
+  background: var(--brand-light);
+  border: 2rpx solid #D6E0FF;
+  border-radius: 32rpx;
+}
+.cl-code-head { font-size: 26rpx; color: var(--text-2); }
+.cl-code-val {
+  margin-top: 12rpx;
+  font-family: Menlo, Consolas, monospace;
+  font-size: 52rpx;
+  font-weight: 600;
+  letter-spacing: 10rpx;
+  color: var(--brand);
+}
+.cl-code-copy {
+  display: inline-block;
+  margin-top: 16rpx;
+  padding: 0 24rpx;
+  height: 60rpx;
+  line-height: 60rpx;
+  font-size: 26rpx;
+  color: #FFFFFF;
+  background: var(--brand);
+  border-radius: 999rpx;
+}
+.cl-code-tip {
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  line-height: 34rpx;
+  color: var(--text-2);
+}
+.cl-staff {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 20rpx 24rpx;
+  margin-bottom: 12rpx;
+  background: #F7F8FA;
+  border-radius: 32rpx;
+}
+.cl-staff-main { flex: 1; min-width: 0; }
+.cl-staff-name { font-size: 28rpx; color: var(--text-1, #1D2129); }
+.cl-staff-pos {
+  margin-left: 12rpx;
+  padding: 2rpx 12rpx;
+  font-size: 22rpx;
+  color: var(--brand);
+  background: var(--brand-light);
+  border-radius: 16rpx;
+}
+.cl-staff-meta { margin-top: 6rpx; font-size: 24rpx; }
+.cl-staff-ok { color: var(--success); }
+.cl-staff-wait { color: var(--warning); }
+.cl-staff-none { color: var(--text-3); }
+.cl-staff-btn {
+  flex: 0 0 auto;
+  margin-left: 20rpx;
+  padding: 0 24rpx;
+  height: 60rpx;
+  line-height: 60rpx;
+  font-size: 26rpx;
+  color: var(--brand);
+  background: rgba(255, 255, 255, 0.55);
+  border: 2rpx solid #D6E0FF;
+  border-radius: 999rpx;
+}
+.cl-staff-empty {
+  padding: 40rpx 0;
+  text-align: center;
+  font-size: 26rpx;
+  color: var(--text-3);
+}
+
+/* ============ 教职工体系 v0.7.16 ============ */
+
+/* 顶部教职工筛选（需求②）：chip-motion 基类管过渡；这里管几何 ——
+   选中态 padding/font-size 变大 = 布局真变大，邻项被平滑推开（不是 scaleX 那种只改绘制）；
+   flex-wrap 支持小屏换行；保持文档流顺序，绝不重叠。 */
+.cl-fchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+  padding: 8rpx 28rpx 16rpx;
+}
+.cl-fchip {
+  flex: 0 0 auto;
+  padding: 8rpx 24rpx;
+  font-size: 24rpx;
+  line-height: 1.2;
+  color: var(--text-2);
+  background: rgba(255, 255, 255, 0.55);
+  border: 2rpx solid #E5E6EB;
+  border-radius: 999rpx;
+}
+.cl-fchip.on {
+  padding: 12rpx 32rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: var(--brand);
+  border-color: var(--brand);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cl-fchip { transition-duration: .01ms; }
+}
+
+/* 班级多选 chip（新建教职工 / 行内绑班共用） */
+.cl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+}
+.cl-bchip {
+  flex: 0 0 auto;
+  padding: 10rpx 26rpx;
+  font-size: 26rpx;
+  color: var(--text-2);
+  background: rgba(255, 255, 255, 0.55);
+  border: 2rpx solid #E5E6EB;
+  border-radius: 999rpx;
+}
+.cl-bchip.on {
+  padding: 10rpx 30rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: var(--brand);
+  border-color: var(--brand);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cl-bchip { transition-duration: .01ms; }
+}
+
+/* 教职工行：主信息 + 操作按钮组 + 行内绑班编辑器 */
+.cl-staff-ops {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 12rpx;
+}
+.cl-staff-ops .cl-staff-btn { margin-left: 0; }
+.cl-staff-btn.warn {
+  color: #E5484D;
+  border-color: #FFD9D5;
+  /* ⚠️ 这里是「警告态」的浅玫瑰底，**故意不玻璃化**：它是语义色，不是材质。
+     2026-09-26 事故：glassify 脚本用 `#FFF` 做备选做前缀匹配，把 `#FFF3F3` 吃成
+     `rgba(255,255,255,.55);1F2;` —— 语法坏掉 → IDE 报「编译 .wxss 文件错误」。
+     现已改为精确匹配 6 位值，并加了 `check-wxss-compile` 用官方 wcsc 兜底。 */
+  background: #FFF3F3;
+}
+.cl-staff-cls {
+  margin-left: 14rpx;
+  color: var(--text-3);
+}
+.cl-bind-edit {
+  width: 100%;
+  margin-top: 16rpx;
+  padding: 16rpx;
+  background: #F7F8FA;
+  border-radius: 24rpx;
+  box-sizing: border-box;
+}

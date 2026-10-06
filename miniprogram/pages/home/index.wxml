@@ -1,0 +1,551 @@
+<!-- Tab 入场动画（v0.7.12）：内容**分块**依次上浮淡入，见 app.wxss 的 .pa-first / .pa-lite-*
+     与 utils/page-anim.js。首次播完整版，之后回访在两个 lite 类名之间轮换（换名字 = 重播）。
+     ⚠️ 三个类名都要写全，别用 pa-{{animSeq}} 插值 —— check-wxss 是静态扫描，
+        插值出来的类名它看不到，会报「用了但没定义」。
+     ⚠️ 需要入场的块标 st-item + 档位类 st-1~st-7（第 7 块起封顶，错峰见 app.wxss）。
+       ⚠️ 增删块之后必须重排档位号，check-tab-enter 会校验「第 N 块 = st-N」。 -->
+<!-- 防滚动穿透（v0.7.9）：弹层里的 scroll-view 滑到下沿后，touchmove 会继续冒泡给 page，
+     「在弹层里滑到底 → 后面的页面跟着一起滑」就是这么来的。
+     page-meta 的 page-style 是官方/社区验证的锁页面滚动方案（Vant Weapp 的 popup 同款）。
+     ⚠️ 新增 / 改名的弹层 show 标志必须同步进下面表达式，否则 scripts/check-scroll-lock.js 会报错。 -->
+<page-meta page-style="{{(sheetShow || noticeShow || anncSheetShow || npopSheetShow || leaveHomeShow) ? 'overflow:hidden' : ''}}"></page-meta>
+
+<view class="page home {{paReady ? (animSeq === 0 ? 'pa-first' : (animSeq === 1 ? 'pa-lite-a' : 'pa-lite-b')) : 'pa-hold'}}">
+
+  <!-- NavBar（fixed 默认开）：移出 spring-scroll，否则被 .ss-content 的 transform 建立包含块、固定定位失效（v0.7.19 修） -->
+  <nav-bar>
+    <view class="nav-center" slot="center">
+      <text class="nav-date">{{dateText}}</text>
+      <text class="nav-week">{{weekText}}</text>
+    </view>
+  </nav-bar>
+
+  <!-- 「切换测试账号」模拟态护栏（v1.0.5）：留在此处（spring-scroll 之外）——
+       进 spring-scroll 会被 .ss-content 的 transform 建立包含块，且会跟着一起滚走。 -->
+  <notice-bar
+    wx:if="{{impersonateBanner}}"
+    type="danger"
+    icon="info"
+    text="{{impersonateBanner}}"
+    btnText="恢复本人"
+    bind:action="onRecoverSelf"
+  />
+
+  <!-- 主内容滚动（v0.7.19 需求④）：spring-scroll 提供边界阻尼回弹；flex:1 填满导航栏以下区域 -->
+  <spring-scroll style="display:block;flex:1;min-height:0" class="home-scroll" id="homeMain" bindrefresh="onRefresh">
+  <!-- 未绑定 -->
+  <block wx:if="{{unbound}}">
+    <view class="wrap">
+      <empty-state
+        icon="cloud-off"
+        title="你还没有绑定班级"
+        desc="绑定后即可查看自己的值日安排与课表"
+        btn-text="立即绑定"
+        bind:action="goBind"
+        padding="{{160}}"
+      />
+    </view>
+  </block>
+
+  <!-- 网络失败 -->
+  <block wx:elif="{{failed}}">
+    <view class="wrap">
+      <empty-state
+        icon="cloud-off"
+        title="数据没加载出来"
+        desc="检查网络后重试"
+        btn-text="重新加载"
+        bind:action="onReload"
+        padding="{{160}}"
+      />
+    </view>
+  </block>
+
+  <!-- 加载骨架 -->
+  <block wx:elif="{{loading}}">
+    <view class="wrap">
+      <skeleton type="card" rows="{{1}}" height="{{296}}" />
+      <skeleton type="list" rows="{{3}}" />
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="wrap">
+
+      <!-- Hero 卡（v0.7.16 需求⑨：教职工不值日 → 辅导员不渲染；wx:if 不影响 st-item 兄弟关系） -->
+      <view wx:if="{{!isCounselor}}" class="hero {{hero ? hero.cls : 'plain small'}} st-item st-1" bindtap="onHero">
+        <block wx:if="{{myDuty}}">
+          <view class="hero-top">
+            <view class="hero-chip">{{periodText}}</view>
+            <view class="hero-chip right">
+              {{hero.status}}
+              <view wx:if="{{myDuty.status === 'ONGOING'}}" class="hero-dot"></view>
+            </view>
+          </view>
+          <view class="hero-title" style="color:{{hero.titleColor}}">{{hero.title}}</view>
+          <view class="hero-sub" style="color:{{hero.subColor}}">{{heroSub}}</view>
+          <view class="hero-bottom">
+            <view class="hero-peers">
+              <view wx:for="{{myDuty.peers}}" wx:key="index" class="hero-peer">
+                <avatar-tag name="{{item.name}}" size="{{48}}" ring="{{true}}" />
+              </view>
+              <text class="hero-peer-text" wx:if="{{myDuty.peers.length}}">
+                和 {{myDuty.peers[0].name}}<block wx:if="{{myDuty.peers.length > 1}}">、{{myDuty.peers[1].name}}</block> 一起
+              </text>
+            </view>
+            <text class="hero-more" style="color:{{hero.subColor}}">查看详情 ›</text>
+          </view>
+        </block>
+        <block wx:else>
+          <view class="hero-title noduty">今天没有你的值日</view>
+          <view class="hero-sub noduty-sub">可在「值日」页查看本周安排</view>
+        </block>
+      </view>
+
+      <!-- 关注的学生（v0.7.17 需求⑥，仅辅导员 / 超管）：固定在主页的学生在这里常驻，
+           每行「头像 + 姓名 + 最新一条备注摘要」，点开直接进他的成员详情继续记录。
+           ⚠️ 插在最前面（辅导员最常看的就是这几个人）；插块后**档位必须整体重排**（st-2~st-4）。 -->
+      <view wx:if="{{showPins}}" class="card mt16 st-item st-2">
+        <view class="card-head">
+          <text class="card-title">关注的学生</text>
+          <text class="card-sub">{{pins.length}}/{{pinLimit}}</text>
+        </view>
+        <block wx:if="{{pins.length}}">
+          <view
+            wx:for="{{pins}}"
+            wx:key="memberId"
+            class="pin-row"
+            data-id="{{item.memberId}}"
+            data-class-id="{{item.classId}}"
+            data-name="{{item.name}}"
+            hover-class="press-dim"
+            hover-start-time="0"
+            hover-stay-time="60"
+            bindtap="onPinTap"
+          >
+            <avatar-tag name="{{item.name}}" src="{{item.avatarUrl}}" size="{{72}}" />
+            <view class="pin-info">
+              <view class="pin-line1">
+                <text class="pin-name">{{item.name}}</text>
+                <text wx:if="{{item.className}}" class="pin-class">{{item.className}}</text>
+              </view>
+              <text class="pin-note">{{item.latestNote ? item.latestNote : '还没有备注，点开可以记录'}}</text>
+            </view>
+            <text wx:if="{{item.noteCount}}" class="pin-cnt">{{item.noteCount}}</text>
+            <app-icon name="arrow-right" variant="gray" size="{{32}}" />
+          </view>
+        </block>
+        <view wx:else class="pin-empty">在成员详情里点「固定到主页」，需要长期关注的学生就会出现在这里</view>
+      </view>
+
+      <!-- 语音通知条 -->
+      <view wx:if="{{unreadNotice}}" class="mt16 st-item st-3">
+        <view class="voice-bar">
+          <view class="voice-ic" bindtap="onPlayNotice">
+            <app-icon name="{{playing ? 'pause' : 'play'}}" variant="brand" size="{{44}}" />
+          </view>
+          <view class="voice-info">
+            <view class="voice-title">{{unreadNotice.publisherName}} 发布了语音通知</view>
+            <view class="voice-sub">
+              {{unreadNotice.audioReady ? '时长 ' + unreadNotice.durationText : '审核中'}} · {{unreadNotice.createdAt}}
+            </view>
+          </view>
+          <view class="voice-btn" bindtap="onPlayNotice">{{playing ? '暂停' : '播放'}}</view>
+        </view>
+      </view>
+
+      <!-- 今日课次（教职工隐藏，需求⑨） -->
+      <view wx:if="{{!isCounselor}}" class="card mt16 st-item st-4">
+        <view class="card-head">
+          <text class="card-title">今日课次</text>
+          <view class="card-link" bindtap="goTimetable">查看课表 ›</view>
+        </view>
+        <block wx:if="{{sessions.length}}">
+          <view wx:for="{{sessions}}" wx:key="sessionId" class="course-row {{item.isMine ? 'mine' : ''}} {{item.done ? 'done' : ''}}">
+            <view class="course-bar {{item.isMine ? 'on' : ''}}"></view>
+            <view class="course-info">
+              <view class="course-line1">
+                <text class="course-time">{{item.periodTime ? item.periodTime.start + '-' + item.periodTime.end : '第' + item.period + '节'}}</text>
+                <text class="course-name">{{item.name}}</text>
+              </view>
+              <view class="course-room">{{item.room || '未填教室'}}</view>
+            </view>
+            <view wx:if="{{item.groupScope}}" class="tag {{item.groupScope === 'A' ? 'ga' : 'gb'}}">{{item.groupScope}} 组</view>
+            <view wx:else class="tag all">全体</view>
+          </view>
+        </block>
+        <view wx:else class="no-course">今天无课🎉</view>
+      </view>
+
+      <!-- 明日课次（放假 / 调课 / 跨周都由后端按「实际上课日期」算好；教职工隐藏，需求⑨） -->
+      <view wx:if="{{!isCounselor}}" class="card mt16 st-item st-5">
+        <view class="card-head">
+          <text class="card-title">明日课次</text>
+          <text class="card-sub">{{tomorrowText}}</text>
+        </view>
+        <block wx:if="{{tomorrowSessions.length}}">
+          <view wx:for="{{tomorrowSessions}}" wx:key="sessionId" class="course-row">
+            <view class="course-bar"></view>
+            <view class="course-info">
+              <view class="course-line1">
+                <text class="course-time">{{item.periodTime ? item.periodTime.start + '-' + item.periodTime.end : '第' + item.period + '节'}}</text>
+                <text class="course-name">{{item.name}}</text>
+              </view>
+              <view class="course-room">{{item.room || '未填教室'}}</view>
+            </view>
+            <view wx:if="{{item.groupScope}}" class="tag {{item.groupScope === 'A' ? 'ga' : 'gb'}}">{{item.groupScope}} 组</view>
+            <view wx:else class="tag all">全体</view>
+          </view>
+        </block>
+        <view wx:else class="no-course">明日无课🎉</view>
+      </view>
+
+      <!-- 管理员入口：紧接「明日课次」，标题按身份显示职位头衔（超管金 / 班委蓝 / 辅导员青）
+           「管理员」含超管，「超管」严格仅超管（§41 术语约定）
+           v0.7.16 需求⑥：辅导员不显示「成员与分组」（只能看到一个班的旧卡片），
+           原位换成「查看班级」—— 从班级管理里看特定班级的人员。 -->
+      <view wx:if="{{isAdmin}}" class="card mt16 admin-card st-item st-6">
+        <view wx:if="{{adminTag}}" class="admin-tag {{adminTier}}">{{adminTag}}</view>
+        <view class="admin-grid">
+          <view class="admin-cell" hover-class="press-dim" hover-start-time="0" hover-stay-time="60" bindtap="{{isCounselor ? 'goClasses' : 'goRoster'}}">
+            <app-icon name="people" variant="brand" size="{{48}}" />
+            <text>{{isCounselor ? '查看班级' : '成员与分组'}}</text>
+          </view>
+          <view class="admin-cell" bindtap="onNoticeOpen">
+            <app-icon name="bell" variant="brand" size="{{48}}" />
+            <text>发布通知</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 首页请假卡（1.0.5 追加，需求①②）：班委/超管看本班请假人数、辅导员看各班总数；
+           普通同学不可见（决策④）。点击 → 按 A/B 组列出请假的人（班委可撤销）。 -->
+      <view wx:if="{{showLeaveHome}}" class="card mt16 leave-home st-item st-7">
+        <block wx:if="{{leaveHomeMode === 'class'}}">
+          <view class="lh-head">
+            <text class="lh-title">{{leaveHomeClassName ? leaveHomeClassName + ' · 请假' : '本班请假'}}</text>
+            <text wx:if="{{leaveHomeDate}}" class="lh-date">{{leaveHomeDate}}</text>
+          </view>
+          <view class="lh-body" bindtap="onLeaveHomeOpen" hover-class="press-dim" hover-start-time="0" hover-stay-time="60">
+            <text class="lh-num {{leaveHomeLeave > 0 ? 'warn' : ''}}">{{leaveHomeLeave}}</text>
+            <text class="lh-unit">人请假</text>
+          </view>
+          <view class="lh-foot">
+            <text class="lh-grp">A 组 {{leaveHomeLeaveA}} 人</text>
+            <text class="lh-grp">B 组 {{leaveHomeLeaveB}} 人</text>
+            <text class="lh-more">查看名单 ›</text>
+          </view>
+        </block>
+        <block wx:else>
+          <view class="lh-head"><text class="lh-title">各班请假人数</text></view>
+          <view class="lh-classes">
+            <view
+              wx:for="{{leaveHomeClasses}}"
+              wx:key="classId"
+              class="lh-cls"
+              data-id="{{item.classId}}"
+              data-name="{{item.className}}"
+              bindtap="onLeaveHomeClassTap"
+              hover-class="press-dim"
+              hover-start-time="0"
+              hover-stay-time="60"
+            >
+              <text class="lh-cls-name">{{item.className}}</text>
+              <text class="lh-cls-num">{{item.leave}} 人</text>
+            </view>
+          </view>
+          <view wx:if="{{!leaveHomeClasses.length}}" class="lh-empty">暂无可查看的班级</view>
+        </block>
+      </view>
+
+      <!-- 查看通知（§41 需求⑦）：全员可见，未确认数红点角标。点开直接进通知页，
+           不再绕到「我的」页找入口 -->
+      <view class="card mt16 notice-card st-item st-7" bindtap="goNotice" hover-class="press-dim" hover-start-time="0" hover-stay-time="60">
+        <app-icon name="bell" variant="brand" size="{{40}}" />
+        <view class="notice-info">
+          <view class="notice-title">查看通知</view>
+          <view class="notice-sub">班委发布的所有通知与回执</view>
+        </view>
+        <view wx:if="{{noticeUnacked}}" class="notice-badge">{{noticeUnacked}}</view>
+        <app-icon name="arrow-right" variant="gray" size="{{32}}" />
+      </view>
+
+      <!-- 查看班级（超管 / 辅导员，多班级 §43 需求⑤）：可新建班级、查看邀请码 / 入班码、导入名单
+           v0.7.16：辅导员的这个入口已上移到管理员卡（原「成员与分组」位置），这里不再重复显示 -->
+      <view wx:if="{{canViewClass && !isCounselor}}" class="card mt16 notice-card" bindtap="goClasses" hover-class="press-dim" hover-start-time="0" hover-stay-time="60">
+        <app-icon name="people" variant="brand" size="{{40}}" />
+        <view class="notice-info">
+          <view class="notice-title">查看班级</view>
+          <view class="notice-sub">班级列表、邀请码 / 入班码、导入名单</view>
+        </view>
+        <app-icon name="arrow-right" variant="gray" size="{{32}}" />
+      </view>
+
+      <!-- 待办条 -->
+      <view wx:if="{{pendingSwapCount > 0}}" class="mt16 st-item st-7">
+        <notice-bar
+          type="warning"
+          icon="bell"
+          text="你有 {{pendingSwapCount}} 条换班申请待确认"
+          btn-text="去处理"
+          bind:action="goMine"
+        />
+      </view>
+
+      <view class="foot-space"></view>
+    </view>
+  </block>
+
+  <!-- 值日提醒：右下角悬浮胶囊。三种形态（§43 需求③ + v0.7.15 额度失效提醒）：
+       ① 未开启 → 「打开微信通知」（首次授权，拿第 1 条额度）；
+       ② 已开启但额度耗尽（后端 remindBlock）→ 「微信提醒已失效，点此重新开启」——
+          一次性订阅没有长期通道，额度用尽后发送是静默失败的，学生完全无感知，
+          必须主动把人拉回来再授权，否则「当天早上 07:00」那条永远发不出去；
+       ③ 已开启且额度正常 → 隐藏（攒额度去「我的」，保持首页干净）。
+       仅正文正常渲染时出现（骨架 / 失败 / 未绑定态都不显示）。 -->
+  </spring-scroll>
+
+  <view wx:if="{{!isCounselor && !unbound && !loading && !failed && (!remindOn || remindBlock)}}" class="remind-fab" hover-class="press-dim" hover-start-time="0" hover-stay-time="60" bindtap="onRemind">
+    <app-icon name="bell" variant="{{remindBlock ? 'orange' : 'brand'}}" size="{{32}}" />
+    <text>{{remindBlock ? '微信提醒已失效，点此重新开启' : '打开微信通知'}}</text>
+  </view>
+
+  <duty-sheet
+    show="{{sheetShow}}"
+    duty-id="{{sheetDutyId}}"
+    bind:close="onSheetClose"
+    bind:changed="onSheetChanged"
+  />
+
+  <!-- 发布通知（管理员）：文字 + 在线文档链接 + 可选「需要确认收到」
+       表单统一走 .np-field 分组（左右 32rpx、每组 28rpx 间距），拿不到 .np-field 会贴屏幕边 -->
+  <bottom-sheet show="{{noticeShow}}" title="发布通知" height="{{1560}}" bind:close="onNoticeClose">
+    <view class="np">
+      <view class="np-field">
+        <view class="np-label">标题<text class="np-opt">选填</text></view>
+        <input
+          class="np-input"
+          value="{{noticeTitle}}"
+          placeholder="不填则只发内容"
+          placeholder-class="f-ph"
+          maxlength="60"
+          bindinput="onNoticeTitle"
+        />
+      </view>
+
+      <view class="np-field">
+        <view class="np-label">内容</view>
+        <textarea
+          class="np-textarea"
+          value="{{noticeContent}}"
+          placeholder="写清楚时间、地点、要带什么"
+          placeholder-class="f-ph"
+          maxlength="2000"
+          bindinput="onNoticeContent"
+        />
+      </view>
+
+      <!-- 配图（v0.7.14）：最多 3 张，chooseMedia 压缩后直传云存储（不走云函数中转） -->
+      <view class="np-field">
+        <view class="np-label">图片<text class="np-opt">最多 3 张，选填</text></view>
+        <view class="np-imgs">
+          <view wx:for="{{noticeImages}}" wx:key="*this" class="np-img">
+            <image class="np-img-pic" src="{{item}}" mode="aspectFill" />
+            <view class="np-img-x" data-i="{{index}}" bindtap="onNoticeRemoveImage" hover-class="press-dim" hover-start-time="0" hover-stay-time="60">
+              <app-icon name="close" variant="gray" size="{{24}}" />
+            </view>
+          </view>
+          <view wx:if="{{noticeImages.length < 3}}" class="np-img np-img-add" bindtap="onNoticePickImage" hover-class="np-abtn-hover" hover-start-time="0" hover-stay-time="60">
+            <app-icon name="plus" variant="brand" size="{{40}}" />
+            <text class="np-img-add-t">添加</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="np-field">
+        <view class="np-label">在线文档链接<text class="np-opt">选填</text></view>
+        <input
+          class="np-input"
+          value="{{noticeLinkUrl}}"
+          placeholder="https://…（金山文档 / 腾讯文档）"
+          placeholder-class="f-ph"
+          maxlength="500"
+          bindinput="onNoticeLink"
+        />
+        <input
+          wx:if="{{noticeLinkUrl}}"
+          class="np-input np-input-2"
+          value="{{noticeLinkName}}"
+          placeholder="显示名（粘贴链接后自动检测标题）"
+          placeholder-class="f-ph"
+          maxlength="60"
+          bindinput="onNoticeLinkName"
+        />
+        <text wx:if="{{noticeLinkDetecting}}" class="np-link-detecting">正在检测文档标题…</text>
+        <text wx:if="{{noticeLinkHint}}" class="np-link-hint">{{noticeLinkHint}}</text>
+      </view>
+
+      <view class="np-field">
+        <view class="np-label">发给谁</view>
+        <!-- width 必须等于「750 - .np 左右内边距」= 686，否则会出现右侧空缺或换行 -->
+        <segmented items="{{noticeScopeItems}}" value="{{noticeScope}}" width="{{686}}" bind:change="onNoticeScope" />
+      </view>
+
+      <!-- 多班级：仅辅导员账号显示「发送班级」；**默认只勾本班**，可逐个点班 / 一键全选 / 清空。
+           需求④：以前默认「全部班级」，导致想发本班的人把通知发到了所有班级 -->
+      <view wx:if="{{noticeShowClasses && noticeScope !== 'PICK'}}" class="np-field">
+        <view class="np-label">发送班级<text class="np-opt">可多选</text></view>
+        <view class="np-classes">
+          <view class="np-cls chip-motion {{noticeAllClasses ? 'on' : ''}}" bindtap="onNoticeToggleAllClasses" hover-class="np-abtn-hover" hover-stay-time="60">全部班级</view>
+          <view class="np-cls ghost chip-motion" bindtap="onNoticeClearClasses" hover-class="np-abtn-hover" hover-stay-time="60">清空</view>
+          <view
+            wx:for="{{noticeClasses}}"
+            wx:key="id"
+            class="np-cls chip-motion {{noticeClassPicked[item.id] ? 'on' : ''}}"
+            data-id="{{item.id}}"
+            bindtap="onNoticeToggleClass"
+            hover-class="np-abtn-hover"
+            hover-stay-time="60"
+          >{{item.name}}</view>
+        </view>
+        <text class="np-cls-tip">{{noticeAllClasses ? '已选全部班级（点某个班可取消该班）' : (noticeClassIds.length ? '已选 ' + noticeClassIds.length + ' 个班级' : '未选班级，将无法发布')}}</text>
+      </view>
+
+      <!-- 按职位：预设职位一键选择（口径 = member.position 实际的 7 种，不做手输） -->
+      <view wx:if="{{noticeScope === 'POSITION'}}" class="np-field">
+        <view class="np-label">职位<text class="np-opt">可多选</text></view>
+        <view class="np-chips">
+          <view
+            wx:for="{{noticePosPresets}}"
+            wx:key="*this"
+            class="np-chip chip-motion {{noticePosPicked[item] ? 'on' : ''}}"
+            data-pos="{{item}}"
+            bindtap="onNoticePosPreset"
+            hover-class="np-abtn-hover"
+            hover-stay-time="60"
+          >{{item}}</view>
+        </view>
+        <text class="np-pos-tip">{{noticePosPickedCount ? '已选 ' + noticePosPickedCount + ' 个职位（再点一下取消）' : '点上方职位一键选择，未选将无法发布'}}</text>
+      </view>
+
+      <view wx:if="{{noticeScope === 'PICK'}}" class="np-field">
+        <view class="np-panel">
+          <view class="np-pick-hint">测试账号与辅导员不接收通知，已自动隐藏</view>
+          <view class="np-search">
+            <app-icon name="search" variant="gray" size="{{32}}" />
+            <input
+              class="np-search-input"
+              value="{{noticeKw}}"
+              placeholder="搜索姓名或学号"
+              placeholder-class="f-ph"
+              bindinput="onNoticeKw"
+            />
+          </view>
+          <view class="np-abtns">
+            <view class="np-abtn chip-motion {{noticePickAllA ? 'on' : ''}}" data-tag="A" bindtap="onPickGroup" hover-class="np-abtn-hover" hover-stay-time="60">A 组</view>
+            <view class="np-abtn chip-motion {{noticePickAllB ? 'on' : ''}}" data-tag="B" bindtap="onPickGroup" hover-class="np-abtn-hover" hover-stay-time="60">B 组</view>
+            <view class="np-abtn ghost chip-motion" bindtap="onClearPick" hover-class="np-abtn-hover" hover-stay-time="60">清空</view>
+            <view wx:if="{{noticePickedCount}}" class="np-picked">已选 {{noticePickedCount}} 人</view>
+          </view>
+          <!-- 小图形网格：每个成员一个头像圆点（显示序号），点一下即选；比长列表紧凑得多（需求④） -->
+          <scroll-view scroll-y class="np-grid-scroll">
+            <view class="np-grid">
+              <view
+                wx:for="{{noticeMembers}}"
+                wx:key="id"
+                class="np-cell chip-motion {{noticePick[item.id] ? 'on' : ''}}"
+                data-id="{{item.id}}"
+                bindtap="onNoticePick"
+                hover-class="np-cell-hover"
+                hover-stay-time="60"
+              >
+                <avatar-tag name="{{item.name}}" text="{{item.seq}}" no-fallback="{{true}}" size="{{76}}" />
+                <text class="np-cell-name">{{item.name}}</text>
+              </view>
+            </view>
+          </scroll-view>
+        </view>
+      </view>
+
+      <view class="np-field">
+        <view class="np-switch">
+          <view class="np-switch-info">
+            <text class="np-switch-title">需要确认收到</text>
+            <text class="np-switch-sub">打开后，成员要在首页「查看通知」里点「确认收到」</text>
+          </view>
+          <switch checked="{{noticeNeedAck}}" color="#3370FF" bindchange="onNoticeAck" />
+        </view>
+      </view>
+
+      <!-- 一次性弹窗（v1.0.5）：与超管的「发布更新公告」同款体验，但跟着这条通知走
+           （只弹给本条的接收人，看过不再弹）。 -->
+      <view class="np-field">
+        <view class="np-switch">
+          <view class="np-switch-info">
+            <text class="np-switch-title">弹出一次性弹窗</text>
+            <text class="np-switch-sub">打开后，接收人下次打开首页会弹出来一次，看过就不再弹</text>
+          </view>
+          <switch checked="{{noticePopup}}" color="#3370FF" bindchange="onNoticePopupChange" />
+        </view>
+      </view>
+
+      <view class="np-actions">
+        <view class="np-btn ghost" bindtap="onNoticeClose">取消</view>
+        <view class="np-btn primary {{noticeBusy ? 'off' : ''}}" bindtap="onNoticeSubmit">{{noticeBusy ? '发布中…' : '发布通知'}}</view>
+      </view>
+    </view>
+  </bottom-sheet>
+
+  <!-- 更新公告（v0.7.25）：超管发送后，所有人下次打开主页弹一次、看过不再弹 -->
+  <bottom-sheet show="{{anncSheetShow}}" title="{{anncNotice.version ? '更新公告 v' + anncNotice.version : '更新公告'}}" bind:close="onAnncDismiss">
+    <view class="an-view">
+      <text wx:if="{{anncNotice.title}}" class="an-view-title">{{anncNotice.title}}</text>
+      <scroll-view class="an-view-scroll" scroll-y="{{true}}" enhanced show-scrollbar="{{false}}">
+        <text class="an-view-content">{{anncNotice.content}}</text>
+      </scroll-view>
+      <view class="an-view-btn" bindtap="onAnncDismiss">知道了</view>
+    </view>
+  </bottom-sheet>
+
+  <!-- 通知一次性弹窗（v1.0.5）：发布通知勾了「弹出一次性弹窗」→ 本条接收人下次打开主页弹一次、
+       看过不再弹。与上面的更新公告共用 .an-view 样式，优先级见 home/index.js 的 _loadPopups。 -->
+  <bottom-sheet show="{{npopSheetShow}}" title="{{npopNotice.title || '班级通知'}}" bind:close="onNpopDismiss">
+    <view class="an-view">
+      <text wx:if="{{npopNotice.title}}" class="an-view-title">{{npopNotice.title}}</text>
+      <scroll-view class="an-view-scroll" scroll-y="{{true}}" enhanced show-scrollbar="{{false}}">
+        <text class="an-view-content">{{npopNotice.content}}</text>
+      </scroll-view>
+      <view class="an-view-btn" bindtap="onNpopDismiss">知道了</view>
+    </view>
+  </bottom-sheet>
+
+  <!-- 首页请假名单（1.0.5 追加）：班委可撤销、辅导员只读；按 A/B 组列出请假的人 -->
+  <bottom-sheet show="{{leaveHomeShow}}" title="{{leaveHomeViewTitle}}" bind:close="onLeaveHomeClose">
+    <view class="lv">
+      <view wx:if="{{leaveHomeListA.length}}" class="lv-grp">
+        <text class="lv-grp-t">A 组 · {{leaveHomeListA.length}} 人</text>
+        <view wx:for="{{leaveHomeListA}}" wx:key="leaveId" class="lv-row">
+          <avatar-tag name="{{item.name}}" text="{{item.seq}}" no-fallback="{{true}}" size="{{56}}" />
+          <view class="lv-info">
+            <text class="lv-name">{{item.name}}</text>
+            <text class="lv-sub">{{item.startDate}} ~ {{item.endDate}}</text>
+          </view>
+          <view wx:if="{{leaveHomeCanCancel}}" class="lv-cancel {{leaveHomeBusy ? 'busy' : ''}}" data-id="{{item.leaveId}}" catchtap="onLeaveHomeCancelTap">撤销</view>
+        </view>
+      </view>
+      <view wx:if="{{leaveHomeListB.length}}" class="lv-grp">
+        <text class="lv-grp-t">B 组 · {{leaveHomeListB.length}} 人</text>
+        <view wx:for="{{leaveHomeListB}}" wx:key="leaveId" class="lv-row">
+          <avatar-tag name="{{item.name}}" text="{{item.seq}}" no-fallback="{{true}}" size="{{56}}" />
+          <view class="lv-info">
+            <text class="lv-name">{{item.name}}</text>
+            <text class="lv-sub">{{item.startDate}} ~ {{item.endDate}}</text>
+          </view>
+          <view wx:if="{{leaveHomeCanCancel}}" class="lv-cancel {{leaveHomeBusy ? 'busy' : ''}}" data-id="{{item.leaveId}}" catchtap="onLeaveHomeCancelTap">撤销</view>
+        </view>
+      </view>
+      <view wx:if="{{leaveHomeLoading}}" class="lv-empty">加载中…</view>
+      <view wx:elif="{{!leaveHomeListA.length && !leaveHomeListB.length}}" class="lv-empty">今天没有人请假</view>
+    </view>
+  </bottom-sheet>
+</view>

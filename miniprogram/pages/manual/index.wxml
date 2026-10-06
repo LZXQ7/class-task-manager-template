@@ -1,0 +1,173 @@
+<!-- 防滚动穿透（v0.7.9）：弹层里的 scroll-view 滑到下沿后，touchmove 会继续冒泡给 page，
+     「在弹层里滑到底 → 后面的页面跟着一起滑」就是这么来的。
+     page-meta 的 page-style 是官方/社区验证的锁页面滚动方案（Vant Weapp 的 popup 同款）。
+     ⚠️ 新增 / 改名的弹层 show 标志必须同步进下面表达式，否则 scripts/check-scroll-lock.js 会报错。 -->
+<page-meta page-style="{{pickerShow ? 'overflow:hidden' : ''}}"></page-meta>
+
+<!-- 左右滑动切周：手势挂在页面根节点（覆盖整页），见 utils/swipe.js。
+     选人弹层打开时在 onSwipeEnd 里挡掉（弹层 DOM 就在这个根节点里）。 -->
+<view class="page ms page-fade" bindtouchstart="onSwipeStart" bindtouchend="onSwipeEnd">
+
+  <!-- 固定顶部：长列表滚动时返回键始终可点 -->
+  <nav-bar
+    title="手动排班"
+    show-back="{{true}}"
+    fixed="{{true}}"
+    border="{{true}}"
+  >
+    <view slot="right">
+      <text class="ms-nav-hint">{{published ? '已发布' : '草稿'}}</text>
+    </view>
+  </nav-bar>
+
+  <week-switcher
+    week="{{week}}"
+    total="{{totalWeeks}}"
+    current="{{current}}"
+    term-start="{{termStart}}"
+    status-text="{{published ? '已发布' : '草稿'}}"
+    status-type="{{published ? 'published' : 'draft'}}"
+    bind:change="onWeekChange"
+  />
+
+  <view class="ms-tip">
+    列出本周全部课次（含还没排人的）。点「＋ 添加值日」安排同学；点已排同学可换人或移除。分组课、同一天不重复、请假不排这些规则由系统自动拦截。
+  </view>
+
+  <!-- 数据区（骨架 / 空态 / 课次列表）：左右滑动切周时这一整块做方向性过渡，
+       class 由 utils/swipe.js 下发、样式在 app.wxss。
+       ⚠️ 别把 fixed 元素放进这个容器 —— transform 会创建包含块，fixed 后代会跟着一起位移；
+          底部固定条（.ms-bar）刻意留在外面，由 scripts/check-week-swipe.js 守着。 -->
+  <view class="wk-swipe {{swipeCls}}">
+  <skeleton wx:if="{{loading}}" type="card" rows="{{3}}" height="{{360}}" />
+
+  <empty-state
+    wx:elif="{{failed}}"
+    icon="cloud-off"
+    title="数据没加载出来"
+    desc="检查网络后重试"
+    btn-text="重新加载"
+    bind:action="onReload"
+    padding="{{140}}"
+  />
+
+  <block wx:elif="{{!days.length}}">
+    <empty-state
+      icon="empty-box"
+      title="本周没有课次"
+      desc="先在课程表录入本周课程，再来安排值日"
+      padding="{{140}}"
+    />
+  </block>
+
+  <block wx:else>
+    <view wx:for="{{days}}" wx:key="date" class="ms-day card">
+      <view class="ms-dayhead">
+        <text class="ms-daytitle">{{item.weekdayText}} {{item.dateText}}</text>
+        <text class="ms-daysub">{{item.sessions.length}} 节课</text>
+      </view>
+
+      <view
+        wx:for="{{item.sessions}}"
+        wx:for-item="s"
+        wx:key="sessionId"
+        class="ms-sess"
+      >
+        <view class="ms-sesshead">
+          <text class="ms-sess-title">{{s.whenText}} · {{s.courseName}}</text>
+          <text wx:if="{{s.groupScope}}" class="ms-sess-group">{{s.groupScope}} 组</text>
+          <text class="ms-sess-count {{s.full ? 'ok' : ''}}">{{s.countText}}</text>
+        </view>
+        <text class="ms-sess-sub">{{s.room || '未填教室'}}</text>
+
+        <view class="ms-chips">
+          <view
+            wx:for="{{s.members}}"
+            wx:for-item="m"
+            wx:key="dutyId"
+            class="ms-chip"
+            data-date="{{item.date}}"
+            data-sid="{{s.sessionId}}"
+            data-dutyid="{{m.dutyId}}"
+            bindtap="onMemberTap"
+          >
+            <avatar-tag name="{{m.name}}" text="{{m.seqText}}" no-fallback="{{true}}" size="{{52}}" />
+            <text class="ms-chip-name">{{m.name}}</text>
+            <app-icon name="chevron-down" variant="gray" size="{{24}}" />
+          </view>
+
+          <view
+            class="ms-add"
+            data-date="{{item.date}}"
+            data-sid="{{s.sessionId}}"
+            bindtap="onAdd"
+          >
+            <app-icon name="plus" variant="brand" size="{{28}}" />
+            <text class="ms-add-text">添加值日</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="page-foot-space"></view>
+  </block>
+  </view>
+
+  <!-- 底部固定条：统计 + 发布 -->
+  <view wx:if="{{!loading && !failed && days.length}}" class="ms-bar">
+    <text class="ms-bar-text">共 {{stats.total}} 次值日 · {{stats.people}} 人</text>
+    <view wx:if="{{published}}" class="ms-bar-btn ghost" bindtap="onUnpublish">撤回发布</view>
+    <view wx:else class="ms-bar-btn primary" bindtap="onPublish">发布给全班</view>
+  </view>
+
+  <!-- 选人 -->
+  <bottom-sheet
+    show="{{pickerShow}}"
+    title="{{pickerTitle}}"
+    height="{{1040}}"
+    tabbar="{{false}}"
+    bind:close="onPickerClose"
+  >
+    <view class="pk">
+      <view class="pk-search">
+        <app-icon name="search" variant="gray" size="{{32}}" />
+        <input
+          class="pk-search-input"
+          value="{{kw}}"
+          placeholder="搜索姓名或序号"
+          placeholder-class="f-ph"
+          bindinput="onPickerKw"
+        />
+        <text wx:if="{{kw}}" class="pk-search-clear" bindtap="onPickerClear">清除</text>
+      </view>
+
+      <view class="pk-gap">
+        <text class="pk-gap-text">共 {{pickerCount}} 人，灰色为不可选（已在此课次 / 请假 / 分组不符 / 当天已有值日）；带「测试」标记的是测试账号，可手动排入，用来验证换班通知。</text>
+      </view>
+
+      <view
+        wx:for="{{list}}"
+        wx:key="id"
+        class="pk-row {{item.disabled ? 'off' : ''}}"
+        data-id="{{item.id}}"
+        bindtap="onPickMember"
+      >
+        <avatar-tag name="{{item.name}}" text="{{item.seqText}}" no-fallback="{{true}}" size="{{72}}" />
+        <view class="pk-info">
+          <text class="pk-name">{{item.name}}</text>
+          <text class="pk-sub">{{item.test ? '测试账号 · ' : ''}}{{item.groupTag}} 组 · 本轮已排 {{item.dutyCount}} 次</text>
+        </view>
+        <view wx:if="{{item.badge}}" class="pk-badge {{item.badgeBad ? 'bad' : 'warn'}}">{{item.badge}}</view>
+        <app-icon wx:else name="arrow-right" variant="gray" size="{{32}}" />
+      </view>
+
+      <empty-state
+        wx:if="{{!list.length}}"
+        icon="empty-box"
+        title="没有匹配的同学"
+        desc="换个关键词试试"
+        padding="{{60}}"
+      />
+    </view>
+  </bottom-sheet>
+</view>

@@ -1,0 +1,8 @@
+{
+  "name": "course",
+  "timeout": 60,
+  "memorySize": 512,
+  "permissions": {
+    "openapi": ["security.msgSecCheck"]
+  }
+}

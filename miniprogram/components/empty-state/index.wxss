@@ -1,0 +1,33 @@
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.empty-title {
+  margin-top: 24rpx;
+  font-size: 28rpx;
+  line-height: 40rpx;
+  color: #86909C;
+}
+.empty-desc {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  line-height: 34rpx;
+  color: #C9CDD4;
+  text-align: center;
+  padding: 0 64rpx;
+}
+.empty-btn {
+  margin-top: 32rpx;
+  height: 64rpx;
+  padding: 0 32rpx;
+  border-radius: 40rpx;
+  background: #F0F5FF;
+  color: #3370FF;
+  font-size: 26rpx;
+  line-height: 64rpx;
+}
+.empty-btn:active {
+  background: #DCE8FF;
+}

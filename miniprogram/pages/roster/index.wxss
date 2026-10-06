@@ -1,0 +1,811 @@
+/* ===== 成员与分组（独立页）===== */
+
+/* ===== 顶部概览（1.0.5 重做：玻璃头部卡）=====
+ * 走 app.wxss 的 .card 玻璃材质（本页不自行声明 backdrop-filter，兜底由全局负责），
+ * 内部两组：「名册概览」+「今日在位」。 */
+.rb-head {
+  margin: 20rpx 24rpx 0;
+  padding: 4rpx 24rpx 16rpx;
+}
+.rb-grp { padding: 16rpx 8rpx 8rpx; }
+.rb-grp-last { margin-top: 4rpx; border-top: 1rpx solid var(--line-2); }
+.rb-grp-t {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 34rpx;
+  font-size: 22rpx;
+  letter-spacing: 1rpx;
+  color: var(--text-3);
+}
+.rb-grp-more { font-size: 22rpx; color: var(--brand); }
+.rb-grid { display: flex; margin-top: 10rpx; }
+.rb-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.rb-cell-lv { border-radius: 20rpx; }
+.rb-num {
+  font-size: 40rpx;
+  line-height: 52rpx;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.rb-num.warn,
+.rb-num.danger { color: var(--danger); }
+.rb-lab {
+  margin-top: 2rpx;
+  font-size: 22rpx;
+  line-height: 30rpx;
+  color: var(--text-3);
+}
+/* 页面根类（与项目其它页一致，留出全局 page 钩子空间） */
+.rb { /* no-op, 仅占位便于将来扩展 */ }
+
+.rb-warn {
+  padding: 16rpx 32rpx 0;
+}
+/* 搜索（独占一行） */
+.mb-bar {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 32rpx 0;
+}
+.mb-search {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  height: 72rpx;
+  padding: 0 20rpx;
+  background: var(--bg-fill);
+  border-radius: var(--r-pill);
+}
+.mb-search-input {
+  flex: 1;
+  min-width: 0;
+  margin-left: 12rpx;
+  height: 72rpx;
+  font-size: 26rpx;
+  color: var(--text-1);
+}
+/* 操作按钮行：整行平分，与搜索框同一留白节奏（不再挤在搜索框右侧）
+   下留白 12rpx + .mb-filters 上留白 16rpx = 与筛选胶囊共 28rpx 间隔（v0.7.32 问题④：
+   原先只有 8rpx，两排贴在一起） */
+.mb-actions {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 32rpx 12rpx;
+}
+.mb-act {
+  flex: 1;
+  height: 72rpx;
+  line-height: 72rpx;
+  text-align: center;
+  font-size: 26rpx;
+  font-weight: 500;
+  color: var(--text-2);
+  background: #FFFFFF;
+  border: 1rpx solid var(--line-1);
+  border-radius: var(--r-pill);
+}
+.mb-act + .mb-act { margin-left: 16rpx; }
+.mb-act:active { background: var(--bg-fill); }
+/* 「导入名单」= 主操作（品牌色浅底） */
+.mb-act-primary { color: var(--brand); background: var(--brand-light); border-color: #D6E4FF; }
+.mb-act-primary:active { background: #DCE8FF; }
+/* 「请假登记」：橙色系与「录入」区分（沿用原橙色口径） */
+.mb-act-leave { color: #D46B08; background: #FFF7E8; border-color: #FFE7C2; }
+.mb-act-leave:active { background: #FFEFD1; }
+
+.mb-row {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 32rpx;
+  position: relative;
+}
+.mb-row + .mb-row::before {
+  content: '';
+  position: absolute;
+  left: 32rpx;
+  right: 0;
+  top: 0;
+  height: 2rpx;
+  background: #F2F3F5;
+}
+.mb-row.off { opacity: 0.55; }
+.mb-info {
+  flex: 1;
+  min-width: 0;
+  margin-left: 20rpx;
+  display: flex;
+  flex-direction: column;
+}
+.mb-nameline {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.mb-name {
+  font-size: 30rpx;
+  line-height: 44rpx;
+  font-weight: 500;
+  color: #1D2129;
+}
+.mb-bind {
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  padding: 0 10rpx;
+  height: 32rpx;
+  line-height: 32rpx;
+  font-size: 20rpx;
+  color: #86909C;
+  background: #F2F3F5;
+  border-radius: 999rpx;
+}
+.mb-bind.on {
+  color: #00B42A;
+  background: #E8FFEA;
+}
+.mb-sub {
+  font-size: 24rpx;
+  line-height: 34rpx;
+  color: #86909C;
+}
+.cnt-num { display: inline-block; min-width: 46rpx; text-align: center; }
+.mb-tag {
+  flex-shrink: 0;
+  margin-left: 8rpx;
+  padding: 0 12rpx;
+  height: 40rpx;
+  line-height: 40rpx;
+  font-size: 22rpx;
+  color: #4E5969;
+  background: #F2F3F5;
+  border-radius: 16rpx;
+}
+.mb-tag.ga  { color: #3370FF; background: #F0F5FF; }
+.mb-tag.gb  { color: #7C5CFF; background: #F3F0FF; }
+.mb-tag.test { color: #722ED1; background: #F3F0FF; }
+.mb-tag.super     { color: #D46B08; background: #FFF3C2; }
+.mb-tag.counselor  { color: #0AA5A8; background: #E8FFFB; }
+.mb-tag.committee  { color: #3370FF; background: #F0F5FF; }
+
+/* 成员详情 */
+/* v0.7.25 终版：不用 height:100% —— sheet-body 是 scroll-view，内层 % 高度不可靠；
+   内容整体随弹层滚动，「保存备注」固定在面板底栏（footer 槽），任何长度下可见 */
+.mb-detail {
+  padding: 40rpx 32rpx 48rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.mb-detail-grid {
+  margin-top: 24rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.mb-detail-grid text {
+  font-size: 26rpx;
+  line-height: 40rpx;
+  /* v0.7.21 需求④：原来和面板底色一样偏灰（#4E5969 在灰玻璃上几乎融进去），
+     详情里的这三行是「这个学生是谁」的主信息，用一级文字色压住底气。
+     ⚠️ 只动文字，不动 .mb-abtn（「调至 A/B 组」等按钮保持原样，用户明确要求）。 */
+  color: #1D2129;
+}
+.mb-detail-grid text.bound { color: #00B42A; }
+.mb-detail-role {
+  margin: 0 0 16rpx;
+  padding: 12rpx 16rpx;
+  border-radius: 24rpx;
+  font-size: 24rpx;
+}
+.mb-detail-role.super     { color: #D46B08; background: #FFF3C2; }
+.mb-detail-role.committee { color: #3370FF; background: #F0F5FF; }
+.mb-detail-role.counselor { color: #0AA5A8; background: #E8FFFB; }
+.mb-detail-actions {
+  margin-top: 32rpx;
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+}
+/* 按钮自适应宽度：一行两个（basis 46%），**间距用右外边距硬留**（不靠 space-between
+ * + flex-grow，那种写法在 grow>0 时会把余量吃光、两个按钮贴在一起）。
+ * 偶数位去掉右外边距，保证一行正好 46% + 8% + 46% = 100%。 */
+.mb-abtn {
+  flex: 0 1 46%;
+  min-width: 0;
+  max-width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  padding: 0 24rpx;
+  margin: 0 8% 16rpx 0;
+  text-align: center;
+  font-size: 28rpx;
+  color: #1D2129;
+  background: #F2F3F5;
+  border-radius: 24rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.mb-abtn:nth-child(2n) { margin-right: 0; }
+/* 「移出班级」= 破坏性主操作，独占一整行的大按钮（必须写在本规则之后：
+ * 与 :nth-child(2n) 同为两级特异度，靠先后顺序决定谁生效） */
+.mb-abtn.block {
+  flex: 0 0 100%;
+  margin-right: 0;
+  height: 96rpx;
+  line-height: 96rpx;
+  font-size: 30rpx;
+  font-weight: 500;
+}
+.mb-abtn:active { background: #E5E6EB; }
+.mb-abtn.danger { color: #F53F3F; background: #FFECE8; }
+.mb-abtn.danger:active { background: #FFD9D5; }
+/* 「固定到主页」的已固定态（v0.7.17 需求⑥）：填充品牌蓝 + 白字，
+   与一排灰按钮明显区分 —— 否则用户看不出这个人是「已经钉在首页」还是「可以钉」 */
+.mb-abtn.on { color: #FFFFFF; background: #3370FF; font-weight: 500; }
+.mb-abtn.on:active { background: #245BDB; }
+.mb-abtn.busy { opacity: .6; }
+.mb-super-hint {
+  margin-top: 8rpx;
+  width: 100%;
+  text-align: center;
+  font-size: 24rpx;
+  color: #86909C;
+}
+
+/* 导入名单 */
+.im-wrap { padding: 8rpx 32rpx 48rpx; }
+.im-area {
+  width: 100%;
+  height: 360rpx;
+  padding: 24rpx;
+  font-size: 26rpx;
+  line-height: 40rpx;
+  color: #1D2129;
+  background: #F7F8FA;
+  border: 2rpx solid #F2F3F5;
+  border-radius: 24rpx;
+}
+.im-tip {
+  display: block;
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  line-height: 34rpx;
+  color: #86909C;
+}
+.im-btn {
+  margin-top: 32rpx;
+  height: 96rpx;
+  line-height: 96rpx;
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #FFFFFF;
+  background: #3370FF;
+  border-radius: 24rpx;
+}
+.im-btn:active { background: #245BDB; }
+
+/* ============================================================
+ * 名单导入增强（2026-09-25）：添加成员表单 / 预览分组 / 撤回
+ * 观感与「班级管理」弹层表单同刻度（92rpx 输入、16rpx 圆角、ghost+primary 双键）
+ * ============================================================ */
+.im-field { margin-top: 28rpx; }
+.im-field:first-child { margin-top: 4rpx; }
+.im-label {
+  display: block;
+  margin-bottom: 12rpx;
+  font-size: 26rpx;
+  color: #4E5969;
+}
+.im-input {
+  height: 92rpx;
+  padding: 0 24rpx;
+  background: #F7F8FA;
+  border-radius: 32rpx;
+  font-size: 28rpx;
+  color: #1D2129;
+}
+
+.im-actions { display: flex; flex-direction: row; margin-top: 40rpx; }
+.im-btn-ghost {
+  flex: 0 0 200rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  margin-right: 16rpx;
+  font-size: 28rpx;
+  color: #4E5969;
+  background: #F2F3F5;
+  border-radius: 32rpx;
+}
+.im-btn-primary {
+  flex: 1;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: #3370FF;
+  border-radius: 32rpx;
+}
+.im-btn-primary.busy { background: #A8C1FF; }
+.im-btn-ghost:active { opacity: .85; }
+.im-btn-primary:active { opacity: .85; }
+
+.im-result {
+  margin-top: 16rpx;
+  font-size: 26rpx;
+  color: #00B42A;
+}
+
+/* 撤回入口 */
+.im-revert {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  margin-top: 32rpx;
+  padding: 20rpx;
+  font-size: 26rpx;
+  color: #F53F3F;
+  background: #FFECE8;
+  border-radius: 32rpx;
+}
+.im-revert:active { background: #FFD9D5; }
+
+/* 预览分组 */
+.im-sec-t {
+  margin: 8rpx 0 20rpx;
+  font-size: 26rpx;
+  color: #4E5969;
+}
+.im-pg {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  background: #F7F8FA;
+  border: 2rpx solid #F2F3F5;
+  border-radius: 32rpx;
+}
+.im-pg.on { border-color: #3370FF; background: #F0F5FF; }
+.im-pg-chk {
+  flex-shrink: 0;
+  width: 44rpx;
+  height: 44rpx;
+  margin-right: 20rpx;
+  line-height: 44rpx;
+  text-align: center;
+  font-size: 28rpx;
+  color: #FFFFFF;
+  background: #FFFFFF;
+  border: 2rpx solid #C9CDD4;
+  border-radius: 20rpx;
+}
+.im-pg-chk.on { background: #3370FF; border-color: #3370FF; }
+.im-pg-main { flex: 1; min-width: 0; }
+.im-pg-label {
+  font-size: 28rpx;
+  color: #1D2129;
+  word-break: break-all;
+}
+.im-pg-meta { margin-top: 6rpx; font-size: 24rpx; color: #4E5969; }
+.im-pg-warn { margin-top: 8rpx; font-size: 22rpx; line-height: 32rpx; color: #FF7D00; }
+.im-pg-sample { margin-top: 8rpx; font-size: 22rpx; color: #86909C; }
+.im-pg-sel {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  padding: 8rpx 20rpx;
+  font-size: 24rpx;
+  color: #3370FF;
+  background: #FFFFFF;
+  border: 2rpx solid #D6E0FF;
+  border-radius: 999rpx;
+}
+.im-empty {
+  padding: 60rpx 0;
+  text-align: center;
+  font-size: 26rpx;
+  color: #86909C;
+}
+
+/* 「或直接导入表格」分隔 + 选文件按钮 */
+.im-or {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin: 28rpx 0 20rpx;
+  font-size: 22rpx;
+  color: #C9CDD4;
+}
+.im-or::before,
+.im-or::after {
+  content: '';
+  flex: 1;
+  height: 2rpx;
+  background: #F2F3F5;
+}
+.im-or text { margin: 0 16rpx; }
+.im-pick {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  font-size: 28rpx;
+  color: #3370FF;
+  background: #FFFFFF;
+  border: 2rpx solid #D6E0FF;
+  border-radius: 32rpx;
+}
+.im-pick text { margin-left: 10rpx; }
+.im-pick:active { background: #F0F5FF; }
+.im-pick.busy { opacity: .6; }
+.im-file {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #00B42A;
+}
+
+/* 自动新建班级开关 */
+.im-switch {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 24rpx;
+  margin-bottom: 16rpx;
+  background: #F5F6F8;
+  border: 2rpx solid #F2F3F5;
+  border-radius: 32rpx;
+}
+.im-switch-info { flex: 1; min-width: 0; padding-right: 16rpx; }
+.im-switch-title { display: block; font-size: 28rpx; color: #1D2129; }
+.im-switch-sub { display: block; margin-top: 4rpx; font-size: 22rpx; line-height: 30rpx; color: #86909C; }
+.im-pg-create { margin-top: 8rpx; font-size: 22rpx; line-height: 32rpx; color: #00B42A; }
+
+/* ---------------- v0.7.9：筛选 chip / 空态 / 设置班委弹层 ---------------- */
+
+/* 「全班 / 仅班委」筛选：紧跟在操作按钮行下方（上留白 16rpx，与 .mb-actions 的 12rpx 合成 28rpx） */
+.mb-filters {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 16rpx 32rpx 16rpx;
+}
+.mb-chip {
+  padding: 8rpx 24rpx;
+  margin-right: 16rpx;
+  font-size: 24rpx;
+  color: #4E5969;
+  background: #F2F3F5;
+  border-radius: 999rpx;
+}
+/* 同首页：.on 给出「变宽后的目标值」（8rpx 24rpx → 8rpx 34rpx），
+   .chip-motion 负责过渡它，邻项才会平滑让位而不是瞬移 */
+.mb-chip.on {
+  color: #FFFFFF;
+  background: #3370FF;
+  padding: 8rpx 34rpx;
+}
+
+/* 筛选/搜索后没有结果时的占位 */
+.rb-empty {
+  padding: 80rpx 32rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: #86909C;
+}
+
+/* 设置班委：职位列表 */
+.ps-title {
+  padding: 4rpx 0 20rpx;
+  font-size: 28rpx;
+  color: #1D2129;
+}
+.ps-list { margin-bottom: 8rpx; }
+.ps-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 24rpx;
+  margin-bottom: 12rpx;
+  background: #F5F6F8;
+  border: 2rpx solid #F2F3F5;
+  border-radius: 32rpx;
+}
+.ps-item.on {
+  background: #F0F5FF;
+  border-color: #D6E0FF;
+}
+.ps-item:active { background: #F0F5FF; }
+.ps-text { font-size: 30rpx; color: #1D2129; }
+.ps-item.on .ps-text { color: #3370FF; font-weight: 600; }
+/* 授权职位（生活委员 / 班长兼团支书）：非超管置灰 —— 需求 D。
+   只降透明度 + 去掉按压反馈，不隐藏：让人看得见「有这两个职位、但要找超管」。 */
+.ps-item.locked { opacity: 0.5; }
+.ps-item.locked:active { background: #F5F6F8; }
+.ps-lock { font-size: 24rpx; color: #86909C; }
+.ps-cancel {
+  margin-top: 8rpx;
+  padding: 26rpx 0;
+  text-align: center;
+  font-size: 28rpx;
+  color: #F53F3F;
+  background: #FFECE8;
+  border-radius: 32rpx;
+}
+
+/* ============ 成员备注（v0.7.16 需求⑦，仅教职工 + 超管） ============
+ * v0.7.17 需求⑤ 重做版式：原版是「26rpx 正文 + 22rpx 元信息」挤在 14rpx 内边距的浅灰块里，
+ * 用户反馈「太小了，显得很小气」。现在：
+ *   · 备注整体 = 一块自带底色的面板，与上方操作按钮区分离；
+ *   · 每条备注 = 白底卡片 + 左侧 6rpx 品牌色竖条（自己写的用蓝色，别人写的用灰蓝）；
+ *   · 正文 28rpx / 行高 1.6，元信息另起一行，编辑提示靠右、用品牌色，不再和作者名混在一起；
+ *   · 书写区独立成块：白底 + 描边 + 字数计数器 + 取消编辑，输入框最小高 160rpx。
+ */
+.mb-notes {
+  margin-top: 24rpx;
+  padding: 24rpx 20rpx 8rpx;
+  background: #F7F8FA;
+  border-radius: 32rpx;
+}
+.mb-notes-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.mb-notes-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.mb-notes-count {
+  font-size: 24rpx;
+  color: var(--text-3);
+}
+.mb-notes-sub {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 23rpx;
+  color: var(--text-3);
+}
+.mb-notes-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  margin: 20rpx 0 8rpx;
+  padding: 28rpx 24rpx;
+  background: #FFFFFF;
+  border-radius: 32rpx;
+}
+.mb-notes-empty-t { font-size: 27rpx; color: var(--text-2); font-weight: 500; }
+.mb-notes-empty-d { font-size: 24rpx; color: var(--text-3); line-height: 1.6; }
+
+.mb-note {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 16rpx;
+  padding: 22rpx 20rpx 22rpx 26rpx;
+  background: #FFFFFF;
+  border-radius: 32rpx;
+  position: relative;
+  overflow: hidden;
+}
+/* 左侧竖条：自己写的（可编辑）用品牌蓝，别人的用中性灰蓝 —— 一眼能分辨归属 */
+.mb-note::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6rpx;
+  background: #C9D3E6;
+}
+.mb-note.mine::after { background: #3370FF; }
+.mb-note-main { flex: 1 1 auto; display: flex; flex-direction: column; gap: 12rpx; min-width: 0; }
+.mb-note-content {
+  font-size: 28rpx;
+  line-height: 1.6;
+  color: var(--text-1);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.mb-note-foot { display: flex; align-items: center; gap: 10rpx; }
+.mb-note-author { font-size: 24rpx; color: var(--text-2); }
+.mb-note-time { font-size: 24rpx; color: var(--text-3); }
+.mb-note-edit { margin-left: auto; font-size: 24rpx; color: #3370FF; }
+.mb-note-del {
+  flex: 0 0 auto;
+  margin-left: 18rpx;
+  padding: 6rpx 16rpx;
+  font-size: 24rpx;
+  color: #E5484D;
+  background: #FFECE8;
+  border-radius: 20rpx;
+}
+
+.mb-note-form {
+  margin-top: 20rpx;
+  padding: 20rpx;
+  background: #FFFFFF;
+  border-radius: 32rpx;
+}
+.mb-note-input {
+  width: 100%;
+  min-height: 160rpx;
+  padding: 20rpx;
+  font-size: 28rpx;
+  line-height: 1.6;
+  color: var(--text-1);
+  background: #F7F8FA;
+  border: 2rpx solid #E5E6EB;
+  border-radius: 24rpx;
+  box-sizing: border-box;
+}
+.mb-note-formfoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 10rpx 0 4rpx;
+}
+.mb-note-counter { font-size: 23rpx; color: var(--text-3); }
+.mb-note-cancel { font-size: 25rpx; color: #86909C; padding: 4rpx 8rpx; }
+
+/* v0.7.25：弹层固定底栏（bottom-sheet footer 槽）—— 保存备注按钮常驻可见 */
+/* v0.7.32：底部留白改由 footer 内容自己承担（.sheet-footer 容器不再给） */
+.mb-footer-bar {
+  width: 100%;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+}
+
+/* ============ 1.0.5 需求④：请假登记 ============ */
+
+/* 「请假」按钮上的计数角标 */
+.mb-leave-dot {
+  display: inline-block;
+  min-width: 28rpx;
+  height: 28rpx;
+  margin-left: 8rpx;
+  padding: 0 6rpx;
+  line-height: 28rpx;
+  font-size: 20rpx;
+  text-align: center;
+  color: #FFFFFF;
+  background: #F53F3F;
+  border-radius: 14rpx;
+}
+
+/* 名单里的「请假中」标签 */
+.mb-tag.leave { color: #D46B08; background: #FFF7E8; }
+
+/* ---------- 请假登记弹层 ---------- */
+.lv { padding: 8rpx 32rpx 40rpx; }
+.lv-sec-t {
+  margin: 24rpx 0 12rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1D2129;
+}
+.lv-list {
+  padding: 4rpx 20rpx;
+  background: #F7F8FA;
+  border-radius: 24rpx;
+}
+.lv-row {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+}
+.lv-row + .lv-row { border-top: 2rpx solid #EEF0F3; }
+.lv-info {
+  flex: 1;
+  min-width: 0;
+  margin-left: 16rpx;
+  display: flex;
+  flex-direction: column;
+}
+.lv-name { font-size: 28rpx; color: #1D2129; }
+.lv-sub  { margin-top: 4rpx; font-size: 22rpx; color: #86909C; }
+.lv-cancel {
+  flex-shrink: 0;
+  padding: 0 24rpx;
+  height: 56rpx;
+  line-height: 56rpx;
+  font-size: 24rpx;
+  color: #D46B08;
+  background: #FFF7E8;
+  border-radius: 999rpx;
+}
+.lv-cancel:active { background: #FFEFD1; }
+.lv-cancel.busy { opacity: .6; }
+.lv-empty {
+  padding: 28rpx 0;
+  font-size: 24rpx;
+  color: #86909C;
+  text-align: center;
+  background: #F7F8FA;
+  border-radius: 24rpx;
+}
+
+/* 分组标题（登记弹层与只读名单共用） */
+.lv-grp { margin-top: 16rpx; }
+.lv-grp-t { display: block; margin-bottom: 8rpx; font-size: 26rpx; font-weight: 600; color: #1D2129; }
+
+/* 头像网格（需求③：选人列表由「一人一行」改为头像网格图标形式，每行 4 个） */
+.lv-grid { display: flex; flex-wrap: wrap; margin-top: 8rpx; }
+.lv-cell {
+  width: 25%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16rpx 0;
+  box-sizing: border-box;
+}
+.lv-cell-off { opacity: .45; }
+.lv-cell-name {
+  margin-top: 8rpx;
+  max-width: 100%;
+  font-size: 24rpx;
+  color: #1D2129;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lv-cell-tag { margin-top: 2rpx; font-size: 20rpx; color: #D46B08; }
+.lv-cell-hover { background: #F2F3F5; border-radius: 16rpx; }
+
+.lv-dates { display: flex; align-items: center; }
+.lv-date {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 296rpx;
+  height: 76rpx;
+  padding: 0 20rpx;
+  font-size: 26rpx;
+  color: #1D2129;
+  background: #F2F3F5;
+  border-radius: 20rpx;
+}
+.lv-tilde { margin: 0 16rpx; font-size: 24rpx; color: #86909C; }
+.lv-hint {
+  margin-top: 12rpx;
+  font-size: 22rpx;
+  line-height: 32rpx;
+  color: #86909C;
+}
+
+.lv-search {
+  display: flex;
+  align-items: center;
+  height: 72rpx;
+  padding: 0 20rpx;
+  background: #F2F3F5;
+  border-radius: 999rpx;
+}
+.lv-search-input {
+  flex: 1;
+  min-width: 0;
+  margin-left: 12rpx;
+  height: 72rpx;
+  font-size: 26rpx;
+  color: #1D2129;
+}
+.lv-cand {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 4rpx;
+}
+.lv-cand + .lv-cand { border-top: 2rpx solid #EEF0F3; }

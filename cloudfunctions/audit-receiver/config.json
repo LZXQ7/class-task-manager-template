@@ -1,0 +1,7 @@
+{
+  "name": "audit-receiver",
+  "timeout": 10,
+  "permissions": {
+    "openapi": []
+  }
+}

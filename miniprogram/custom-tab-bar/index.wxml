@@ -1,0 +1,40 @@
+<!-- padding-bottom = 安全区高度；无安全区机型（安卓）由 JS 补 TABBAR_LIFT_PX，
+     使「胶囊下沿 ~ 屏幕底」的距离与 iPhone 一致（见 index.js 顶部注释）。 -->
+<view class="tabbar-wrap" style="padding-bottom:{{tabbarPad}}px">
+  <view class="tabbar">
+    <!-- 液态指示器（v0.7.14）：独立胶囊背景在标签间移动，先拉长再收拢 + 微回弹。
+         放在 tab-item 之前 = 天然垫底，不遮文字、不拦命中（tab-item 自己 z-index:1）。
+         left/width 由 JS 按「胶囊内容宽四等分」算出（不是 750rpx 四等分），
+         stretch/settle 两拍换速（见 index.js）。 -->
+    <view class="tab-ind {{indCls}}" style="left:{{indLeft}}rpx;width:{{indWidth}}rpx"></view>
+    <view
+      wx:for="{{list}}"
+      wx:key="key"
+      class="tab-item {{active === index ? 'on' : ''}} {{popIndex === index ? 'poping' : ''}}"
+      hover-class="tab-item-hover"
+      hover-start-time="0"
+      hover-stay-time="60"
+      data-index="{{index}}"
+      bindtap="onChange"
+    >
+      <view class="tab-icon-box">
+        <!-- 双图层：off/on 两张内联 base64 同帧叠放，只切 opacity（与文字同步），
+             不再走 <app-icon> 换 src 的云存储加载 → 「文字先灰、图标后灰」根治 -->
+        <image
+          class="tab-icon tab-icon-off {{active === index ? 'off' : ''}}"
+          src="{{item.srcOff}}"
+          mode="aspectFit"
+          draggable="{{false}}"
+        />
+        <image
+          class="tab-icon tab-icon-on {{active === index ? 'on' : ''}}"
+          src="{{item.srcOn}}"
+          mode="aspectFit"
+          draggable="{{false}}"
+        />
+        <view wx:if="{{dot && item.key === 'duty' && active !== index}}" class="tab-dot" />
+      </view>
+      <text class="tab-text {{active === index ? 'on' : ''}}">{{item.text}}</text>
+    </view>
+  </view>
+</view>

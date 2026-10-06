@@ -1,0 +1,181 @@
+/* ============ 悬浮式底栏（v0.7.14 重做 · 液态玻璃） ============
+ * 参考 pidanai.com 顶部导航的「液态玻璃」：悬浮胶囊 + 背景模糊 + 亮边高光 + 柔和投影。
+ * · 不再是一条通底白栏 —— 容器透明、且 `pointer-events: none`，只有胶囊本身可点，
+ *   胶囊四周（含上方）的空白区点击直接透传给页面内容；
+ * · 第 6 轮「整体缩小一号」：胶囊高 **92rpx**（= tab-item 内容高 42(icon)+7(margin)+26(line-height)
+ *   = 75rpx，上下各 8.5rpx 由 flex 居中均分；`overflow: hidden` 会裁内容，故不写死内容高）；
+ *   底部悬空 6rpx → **总占位 98rpx**。
+ *   页面留白 `.foot-space`(168rpx) / `.dt-foot`(240) / `.mn-foot`(180) 仍然够；
+ *   让位值已同步 **−14rpx**（home `.remind-fab` 136→122 / timetable `.fab` 152→138、
+ *   `.fab-shift`（v0.7.21 合并入口后改名 `.fab-menu`）158→144 / duty-sheet `.ds-foot` 128→114 / `_fitHeight()` reserve 220→206 /
+ *   `app.js sheetMetrics().tabbarPx` 112→98 + bottom-sheet 兜底 56→49px）；
+ * · 左右内缩 **143rpx**（v0.7.14 第 6 轮）：胶囊内容宽 **464rpx** / 屏宽 750rpx。
+ *   演进：第 3 轮 40rpx（用户「收窄」）→ 第 4 轮 **0**（我把「两边不要留白」误读成「贴屏幕边」）→
+ *   第 5 轮 125rpx（「底栏整体宽度收缩，大概我圈出来这么大」，红框实测 ≈500rpx）→
+ *   第 6 轮 143rpx（「整体都小一点，左右上下，内部图标文字都小一点」）。
+ *   ⚠️ **内缩量必须取奇数**：`750 − 2×S` 要能被 4 整除（格宽为整数），否则
+ *   `normLeft(3) + 格宽 ≠ 胶囊内容宽`，门禁的「零留白」硬断言会失败（470/4 = 117.5 就是反例）。
+ *   宽度与内缩量必须与 index.js 的 `SIDE_RPX` 一致（门禁绑定校验，不写死具体值）。
+ * · 液态玻璃必须是**真的半透明**（第 5 轮用户反馈「应该是液态玻璃，透明的」）：
+ *   v0.7.17 需求②推一档、v0.7.18 对齐 Auroraqua —— 底色 → **.35**、模糊 → **24px**、饱和度 180%（v0.7.18 对齐 Auroraqua 的 .glass 配方）。
+ *   不支持模糊时降级为 .88（仍保留可见的半透明，不再回退到 .94 近乎实心）。
+ *   系统开启「降低透明度」时才转为不透明。
+ */
+.tabbar-wrap {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 900;
+  background: transparent;
+  pointer-events: none;
+}
+.tabbar {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  height: 92rpx;
+  /* 左右各内缩 143rpx → 胶囊内容宽 464rpx（必须与 index.js 的 SIDE_RPX 一致，
+     由 check-tabbar-liquid 绑定校验）。底部 6rpx 悬空 → 总占位 98rpx。 */
+  margin: 0 143rpx 6rpx;
+  border-radius: 46rpx;
+  /* 液态玻璃（v0.7.17 需求②「背景更加透明」）：底白 .5 → **.34**，模糊 30px → **38px**、
+     饱和度 180% → 200%。透明的那一半靠模糊 + 高光撑住可读性 ——
+     纯降 alpha 不加大模糊，会变成「文字压着内容」的糊底。
+     不支持模糊时仍降级为 .88（保留可见的半透明，不再回退到近乎实心）。 */
+  background: rgba(255, 255, 255, 0.35);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  border: 1rpx solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 8rpx 28rpx rgba(29,33,41,0.14),
+    inset 0 1rpx 0 rgba(255, 255, 255, 0.95);
+  pointer-events: auto;
+  overflow: hidden;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .tabbar { background: rgba(255, 255, 255, 0.88); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .tabbar {
+    background: #FFFFFF;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+/* ============ 液态 Tab 指示器（2026-09-26 / v0.7.14 重做） ============
+ * 截图①（Liquid Tab Indicator）口径：
+ *  · 保持标签文字、按钮位置和命中区稳定，让**独立的指示背景**在标签之间移动；
+ *  · 前后边缘运动节奏不同，形成「先拉长、再收拢」的轮廓，最后轻微回弹 ——
+ *    不是固定宽度背景匀速平移；
+ *  · 连续点击时从**当前可见位置与形态**续接（CSS transition 天然从当前插值起播，
+ *    中途改 left/width 不会跳变），最终跟随最后一次有效选择；
+ *  · 内容切换不等装饰动画（switchTab 与指示器并行，互不等待）。
+ *
+ * v0.7.14 第 5 轮改口径：**指示器宽度 = 整格宽**，常态两侧与胶囊边缘零留白。
+ * 用户第 ② 条：「蓝色的遮罩边缘和底栏的边缘不要有留白，尤其是左边『首页』和右边『我的』」。
+ * 因此不再「宽度小于格子、格内居中」——常态就是 left = i×格宽、width = 格宽，
+ * 首格左缘贴胶囊左缘、末格右缘贴胶囊右缘。格宽由 JS 下发（第 6 轮 = 116rpx）。
+ * 「先拉长再收拢」的手感改由 **left 预冲** 承担（见 index.js OVER_RPX）：
+ * stretch 拍先越过目标 OVER_RPX，settle 拍再回落到格位。首/末格预冲方向朝外时会被
+ * 胶囊的 `overflow: hidden` 沿圆弧裁掉 —— 观感正是「贴着边缘流动」，不会露白。
+ */
+/* ⚠️ 高度必须与底栏等高（top:0 + bottom:0 自动铺满），**不许写死 height**：
+ * 写死会在胶囊高度调整时留下「上方空白」——用户 2026-09-26 反馈的就是这个现象。
+ * 圆角 46rpx = 胶囊半径，四角与胶囊同心，落在第一 / 最后一格时不会顶出圆角。 */
+.tab-ind {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 46rpx;
+  background: rgba(51,112,255,.18);
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, .55);
+  z-index: 0;
+}
+.tab-ind.stretch {
+  transition: left .14s cubic-bezier(.2, 0, .2, 1), width .12s cubic-bezier(.55, 0, .85, .4);
+}
+.tab-ind.settle {
+  transition: left .24s cubic-bezier(.32, 1.5, .64, 1), width .22s cubic-bezier(.32, 1.5, .64, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tab-ind.stretch,
+  .tab-ind.settle {
+    transition-duration: .01ms;
+  }
+}
+.tab-item {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* 垂直居中：内容 75rpx 在 92rpx 胶囊里上下各 8.5rpx，两侧留白均等。
+     旧写法用 padding-top 16rpx 把内容整体下压 → 图标上方空 16rpx、文字几乎贴底，
+     用户 2026-09-26 反馈的「上方有空白」就是这个不对称留白。 */
+  justify-content: center;
+  transition: background .12s ease;
+}
+/* 按下反馈：`hover-class` 配 hover-start-time=0，touchstart 就立刻生效。
+   而 switchTab 到首次访问的页面要等页面注入 + 首帧，中间有 100~300ms。
+   有按下态 → 这点延迟主观上「不存在」；没有 → 用户只看到「点了没反应」。 */
+.tab-item-hover {
+  background: rgba(51,112,255,.05);
+}
+.tab-item-hover .tab-icon-box {
+  opacity: .5;
+}
+.tab-icon-box {
+  position: relative;
+  width: 42rpx;
+  height: 42rpx;
+}
+/* 双图层叠放（2026-09-25）：off/on 两张内联 base64 同位叠放，只切 opacity。
+   变色与文字 transition 同为 .2s、同帧生效 —— 根治「文字先灰、图标后灰」；
+   两张图首次渲染即加载完毕（data URI 零网络），切换不再等云存储解码。 */
+.tab-icon {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 42rpx;
+  height: 42rpx;
+  transition: opacity .2s ease;
+}
+.tab-icon-off { opacity: 1; }
+.tab-icon-off.off { opacity: 0; }
+.tab-icon-on { opacity: 0; }
+.tab-icon-on.on { opacity: 1; }
+/* 切到某一项时图标弹一下，与页面入场动画（app.wxss 的 pageInA/B）呼应。
+   2026-09-25：动画从 .on 挪到 .poping（由 popIndex 驱动）——挂在 .on 上时，
+   每个页面自己的 tabBar 实例首次渲染就带 .on，动画会再弹一次，
+   叠加点击实例的弹跳形成「随机闪烁」。现在只有用户点击的那一帧弹一次。 */
+.tab-item.poping .tab-icon-box {
+  animation: tabPop .26s cubic-bezier(.22, .61, .36, 1);
+}
+@keyframes tabPop {
+  0%   { transform: scale(.78); }
+  55%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+.tab-dot {
+  position: absolute;
+  top: -2rpx;
+  right: -5rpx;
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 7rpx;
+  background: #F53F3F;
+  border: 2rpx solid #FFFFFF;
+}
+.tab-text {
+  margin-top: 7rpx;
+  font-size: 20rpx;
+  line-height: 26rpx;
+  color: #C9CDD4;
+  transition: color .2s ease;
+}
+.tab-text.on {
+  color: #3370FF;
+  font-weight: 500;
+}

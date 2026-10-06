@@ -1,0 +1,32 @@
+.wv { min-height: 100vh; background: #F5F6F8; }
+.wv-fail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 240rpx;
+}
+.wv-title {
+  margin-top: 32rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1D2129;
+}
+.wv-desc {
+  margin: 16rpx 64rpx 0;
+  font-size: 26rpx;
+  color: #86909C;
+  line-height: 40rpx;
+  text-align: center;
+}
+.wv-btn {
+  margin-top: 48rpx;
+  padding: 0 48rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 32rpx;
+  background: #3370FF;
+  color: #FFFFFF;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+.wv-btn:active { background: #245BDB; }

@@ -1,0 +1,7 @@
+{
+  "name": "member",
+  "timeout": 20,
+  "permissions": {
+    "openapi": ["security.msgSecCheck"]
+  }
+}

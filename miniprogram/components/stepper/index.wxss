@@ -1,0 +1,25 @@
+.stepper {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.sp-btn {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 32rpx;
+  background: #F2F3F5;
+  color: #4E5969;
+  font-size: 32rpx;
+  line-height: 64rpx;
+  text-align: center;
+}
+.sp-btn.off {
+  color: #C9CDD4;
+}
+.sp-num {
+  width: 80rpx;
+  text-align: center;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1D2129;
+}

@@ -1,0 +1,146 @@
+<!-- 值日详情弹层（P2 / P4 共用）
+     v0.7.32：**并入通用 bottom-sheet** —— 下拉关闭 / grabber 指示条 / 遮罩联动 / 开合两帧动画
+     全部由 components/bottom-sheet 提供，这里只保留「值日详情」的内容与底部操作区，
+     不再自建一套 .ds-root/.ds-mask/.ds-panel 外壳（全站只留一套弹层实现）。
+     footer 由 bottom-sheet 的具名 slot 承载（结构级固定在面板底部，不随内容滚动）。 -->
+<bottom-sheet
+  show="{{show}}"
+  title="值日详情"
+  height="{{sheetH}}"
+  footer="{{showFoot}}"
+  bind:close="onClose"
+>
+  <view class="ds-content">
+    <skeleton wx:if="{{loading}}" type="card" rows="{{3}}" height="{{120}}" />
+
+    <block wx:elif="{{detail}}">
+      <!-- 主体 -->
+      <view class="ds-main">
+        <avatar-tag name="{{detail.duty.name}}" text="{{detail.duty.seqText}}" no-fallback="{{true}}" size="{{88}}" />
+        <view class="ds-main-info">
+          <view class="row">
+            <text class="ds-name">{{detail.duty.name}}</text>
+            <status-pill status="{{detail.duty.status}}" />
+          </view>
+          <view class="ds-sub">
+            {{detail.duty.courseName}} · {{detail.duty.room || '未填教室'}}
+          </view>
+          <view class="ds-sub">
+            {{detail.duty.dateText}} 周{{detail.duty.weekdayText}} · {{detail.duty.whenText}}
+            <block wx:if="{{detail.duty.periodTime}}">
+              （{{detail.duty.periodTime.start}}-{{detail.duty.periodTime.end}}）
+            </block>
+          </view>
+        </view>
+      </view>
+
+      <!-- 同伴 -->
+      <view class="ds-block" wx:if="{{detail.peers.length}}">
+        <view class="ds-block-title">同节次值日</view>
+        <view class="ds-peers">
+          <view wx:for="{{detail.peers}}" wx:key="index" class="ds-peer">
+            <avatar-tag name="{{item.name}}" text="{{item.seqText}}" no-fallback="{{true}}" size="{{64}}" />
+            <text class="ds-peer-name">{{item.name}}</text>
+            <status-pill status="{{item.status}}" size="sm" />
+          </view>
+        </view>
+      </view>
+
+      <!-- 日志 -->
+      <view class="ds-block" wx:if="{{detail.logs.length}}">
+        <view class="ds-block-title">操作记录</view>
+        <view wx:for="{{detail.logs}}" wx:key="index" class="ds-log">
+          <app-icon name="clock" variant="orange" size="{{28}}" />
+          <text class="ds-log-text">{{item.operatorName}} · {{item.action}}</text>
+          <text class="ds-log-time">{{item.createdAt}}</text>
+        </view>
+      </view>
+
+      <!-- 换班 / 请假 -->
+      <block wx:if="{{adjusting}}">
+        <view class="ds-block">
+          <view class="ds-block-title">
+            {{adjusting === 'SWAP' ? '想换给谁（提交后由生活委员确认）' : (adjusting === 'LEAVE' ? '请假日期' : (adjusting === 'ADD' ? '添加谁' : '选择替补（直接替换，无需对方确认）'))}}
+          </view>
+
+          <block wx:if="{{adjusting === 'LEAVE'}}">
+            <view class="ds-dates">
+              <picker mode="date" value="{{startDate}}" bindchange="onDate" data-field="startDate">
+                <view class="ds-date">开始 {{startDate}}</view>
+              </picker>
+              <picker mode="date" value="{{endDate}}" bindchange="onDate" data-field="endDate">
+                <view class="ds-date">结束 {{endDate}}</view>
+              </picker>
+            </view>
+          </block>
+
+          <block wx:else>
+            <view wx:if="{{!candidates.length}}" class="ds-none">
+              <empty-state
+                icon="empty-box"
+                title="没有可换的同学"
+                desc="本周同组同学当天都有值日，建议直接申请请假"
+                padding="{{40}}"
+              />
+            </view>
+            <view
+              wx:for="{{candidates}}"
+              wx:key="id"
+              class="ds-cand {{toMemberId === item.id ? 'on' : ''}}"
+              data-id="{{item.id}}"
+              bindtap="onPickTo"
+            >
+              <avatar-tag name="{{item.name}}" text="{{item.seqText}}" no-fallback="{{true}}" size="{{80}}" />
+              <view class="ds-cand-info">
+                <text class="ds-cand-name">{{item.name}}</text>
+                <!-- 「值日 / 数字 / 次」三段：数字占固定宽度并居中，1 位↔2 位时「次」不会左右跳动 -->
+                <view class="ds-cand-sub"><text>值日</text><text class="cnt-num">{{item.dutyCount}}</text><text>次</text></view>
+              </view>
+              <app-icon wx:if="{{toMemberId === item.id}}" name="check" variant="brand" size="{{40}}" />
+            </view>
+          </block>
+
+          <view class="ds-block-title">原因（选填）</view>
+          <view class="ds-chips">
+            <view
+              wx:for="{{reasons}}"
+              wx:key="key"
+              class="ds-chip {{reason === item.key ? 'on' : ''}}"
+              data-key="{{item.key}}"
+              bindtap="onReason"
+            >{{item.text}}</view>
+          </view>
+        </view>
+      </block>
+    </block>
+  </view>
+
+  <!-- 底部操作区（本工具不做打卡：本人只能请假/换班，超管可调整排班）
+       超管优先：即便这条值日是超管本人，也走「换人 / 添加 / 取消」管理动作，
+       避免出现「超管对自己发起申请换班 → 产生待确认的孤儿申请」的坑（详见 DETAILS §26）。 -->
+  <view slot="footer" class="ds-foot">
+    <block wx:if="{{canAct && !adjusting}}">
+      <block wx:if="{{isSuper}}">
+        <view class="ds-btn danger" bindtap="onRemoveDuty">取消值日</view>
+        <view class="ds-btn ghost" bindtap="onAdjust" data-type="REASSIGN">换人</view>
+        <view class="ds-btn ghost" bindtap="onAdjust" data-type="ADD">添加值日</view>
+      </block>
+      <block wx:elif="{{mineActs}}">
+        <view class="ds-btn ghost" bindtap="onAdjust" data-type="LEAVE">申请请假</view>
+        <view class="ds-btn ghost" bindtap="onAdjust" data-type="SWAP">申请换班</view>
+      </block>
+    </block>
+
+    <!-- 还原换人：这条值日是被「换人」换上来的，超管可一键还给原值日同学（后端按 isSuper 才返回 reassign） -->
+    <block wx:elif="{{detail.reassign && !adjusting}}">
+      <view class="ds-btn ghost" bindtap="onUndoReassign">还原换人（还给 {{detail.reassign.fromName}}）</view>
+    </block>
+
+    <block wx:elif="{{detail && adjusting}}">
+      <view class="ds-btn ghost" bindtap="onCancelAdjust">取消</view>
+      <view class="ds-btn primary" bindtap="onSubmitAdjust">
+        {{submitting ? '处理中' : (adjusting === 'REASSIGN' ? '直接替换' : (adjusting === 'ADD' ? '添加值日' : '提交申请'))}}
+      </view>
+    </block>
+  </view>
+</bottom-sheet>

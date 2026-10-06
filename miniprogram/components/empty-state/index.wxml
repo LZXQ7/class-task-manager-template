@@ -1,0 +1,7 @@
+<view class="empty" style="padding:{{padding}}rpx 0">
+  <app-icon name="{{icon}}" variant="line" size="{{size}}" />
+  <view wx:if="{{title}}" class="empty-title">{{title}}</view>
+  <view wx:if="{{desc}}" class="empty-desc">{{desc}}</view>
+  <view wx:if="{{btnText}}" class="empty-btn" bindtap="onTap">{{btnText}}</view>
+  <slot />
+</view>

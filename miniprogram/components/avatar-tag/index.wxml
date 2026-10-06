@@ -1,0 +1,27 @@
+<view class="avatar-tag">
+  <!-- 有微信头像：圆角方形图片；加载失败回落到姓氏色块 -->
+  <image
+    wx:if="{{showImg}}"
+    class="avatar-img {{ring ? 'avatar-ring' : ''}}"
+    style="width:{{size}}rpx;height:{{size}}rpx;{{ring ? 'box-shadow:0 0 0 ' + ringWidth + 'rpx #FFFFFF' : ''}}"
+    src="{{src}}"
+    mode="aspectFill"
+    lazy-load="{{true}}"
+    binderror="_onImgError"
+  />
+  <view
+    wx:else
+    class="avatar-circle {{ring ? 'avatar-ring' : ''}}"
+    style="width:{{size}}rpx;height:{{size}}rpx;background:{{bg}};{{ring ? 'box-shadow:0 0 0 ' + ringWidth + 'rpx #FFFFFF' : ''}}"
+  >
+    <text class="avatar-char" style="font-size:{{fs}}rpx;line-height:{{size}}rpx;color:{{fg}}">{{char}}</text>
+  </view>
+  <view wx:if="{{label || sub}}" class="avatar-text">
+    <text
+      wx:if="{{label}}"
+      class="avatar-label"
+      style="font-size:{{labelSize}}rpx;color:{{labelColor}}"
+    >{{name}}</text>
+    <text wx:if="{{sub}}" class="avatar-sub">{{sub}}</text>
+  </view>
+</view>

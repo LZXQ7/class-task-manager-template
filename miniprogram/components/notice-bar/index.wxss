@@ -1,0 +1,31 @@
+.nb {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-height: 88rpx;
+  padding: 16rpx 24rpx;
+  border-radius: 40rpx;
+}
+.nb-text {
+  flex: 1;
+  margin-left: 16rpx;
+  font-size: 26rpx;
+  line-height: 36rpx;
+}
+.nb-btn {
+  flex-shrink: 0;
+  height: 64rpx;
+  padding: 0 24rpx;
+  border-radius: 32rpx;
+  font-size: 26rpx;
+  line-height: 64rpx;
+}
+.nb-close {
+  flex-shrink: 0;
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8rpx;
+}

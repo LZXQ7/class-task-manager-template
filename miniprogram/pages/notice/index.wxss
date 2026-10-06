@@ -1,0 +1,423 @@
+.nt { min-height: 100vh; }
+
+/* 提醒授权条 */
+/* v0.7.18 需求④：这一行是「说明 + 一个开启按钮」，说明部分不带底色 ——
+   去掉整条底块与圆角后，右侧的开启按钮（实心粉胶囊）自己就有足够的可点性。 */
+.nt-tipbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin: 24rpx 32rpx 0;
+}
+.nt-tiptext {
+  flex: 1;
+  min-width: 0;
+  margin: 0 16rpx;
+  font-size: 24rpx;
+  line-height: 34rpx;
+  color: #3370FF;
+}
+.nt-tipdone {
+  flex-shrink: 0;
+  font-size: 24rpx;
+  color: #86909C;
+}
+.nt-tipbtn {
+  flex-shrink: 0;
+  padding: 0 24rpx;
+  height: 56rpx;
+  line-height: 56rpx;
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #FFFFFF;
+  background: #3370FF;
+  border-radius: 999rpx;
+}
+.nt-tipbtn:active { background: #245BDB; }
+
+/* 通知卡（需求②：更紧凑，历史通知占的位置更小）
+ * ⚠️ 裁切层（.nt-item）必须自带与卡片**同值**的圆角（v0.7.24，用户报「卡片四个角有灰色」）：
+ *   .nt-card 是玻璃（.card = backdrop-filter + border-radius），而 overflow:hidden **裁不动
+ *   backdrop-filter**（模糊的是元素背后的内容，不受父级圆角约束，见 app.wxss 玻璃令牌处的同族说明）。
+ *   于是「方形的裁切边界 − 圆角卡片」之间那圈对角带里，残留的是没被玻璃化的裸背景，
+ *   在极光渐变上就显成四角四块偏亮的方形色斑。
+ * ⚠️ 外投影（--glass-shadow）也必须搬到这里：投影画在元素**自身边界之外**，
+ *   留在 .nt-card 上会被外层 overflow:hidden 整圈裁掉 —— 卡片就失去「浮在内容之上」的层次，
+ *   而 .nt-item 的 overflow 裁不到它自己的 box-shadow，所以搬上来即恢复。 */
+.nt-item {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-md);
+  box-shadow: var(--glass-shadow);
+  margin: 16rpx 32rpx 0;
+}
+/* 卡内只保留顶部内高光：外投影已上提到 .nt-item 承担，重复画只会加深一倍阴影 */
+.nt-card {
+  padding: 20rpx 28rpx;
+  position: relative;
+  z-index: 2;
+  box-shadow: var(--glass-highlight);
+}
+.nt-head {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+}
+.nt-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 42rpx;
+  color: #1D2129;
+}
+.nt-head-right {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: 12rpx;
+}
+/* 左滑露出的删除区：与卡片保持间距的圆角矩形（不再贴边）
+ * ⚠️ opacity 由「是否已左滑」驱动（v0.7.24）：删除区永远在卡片**后方**，卡片不透明白时
+ *   静止状态天然看不见它；换成半透明玻璃后，粉底会隔着卡片透上来（实拍卡片右三分之一泛粉）。
+ *   所以静止时把整块压到透明，只有 offset<0（手指真的往左带了）才显形。
+ *   hover 的暗化必须写成 .nt-del-zone.nt-del-hover（两个类）才压得住 .nt-del-zone.on。 */
+.nt-del-zone {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  bottom: 8px;
+  width: 72px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #FFECE8;
+  color: #F53F3F;
+  border-radius: 12px;
+  opacity: 0;
+  transition: opacity .16s ease;
+}
+.nt-del-zone.on { opacity: 1; }
+.nt-del-zone.nt-del-hover { opacity: 0.65; }
+.nt-deltxt {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  line-height: 32rpx;
+}
+.nt-acktag {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  padding: 0 16rpx;
+  height: 40rpx;
+  line-height: 40rpx;
+  font-size: 22rpx;
+  color: #FF7D00;
+  background: #FFF7E8;
+  border-radius: 999rpx;
+}
+.nt-acktag.on {
+  color: #00B42A;
+  background: #E8FFEA;
+}
+.nt-meta {
+  margin-top: 6rpx;
+  font-size: 23rpx;
+  color: #86909C;
+}
+/* 正文裁剪层（v0.7.13）：max-height 由 JS 按**实测**高度下发（折叠态 3×42=126rpx，
+   展开态是量出来的真实高度），transition 让它连续变化 ——
+   于是「高度和文字同步展开」，卡片下面的回执 / 下一条通知自然跟着下移。
+   ⚠️ 只动 max-height，不碰 width/height/top 这类布局属性（会触发逐帧重排，低端机掉帧）。 */
+.nt-body {
+  margin-top: 16rpx;
+  overflow: hidden;
+  transition: max-height .28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.nt-content {
+  font-size: 27rpx;
+  line-height: 42rpx;
+  color: #4E5969;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+/* 折叠**静止**态：只裁显示，不改内容 —— 3 行 × 42rpx line-height = 126rpx。
+   line-clamp 只为了那三个省略号；展开 / 收起动画期间由 JS 摘掉（clamped=false），
+   挂着它内容高度就被钉死在 3 行，max-height 再怎么过渡也看不出变化。 */
+.nt-content.is-fold {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+/* 「展开全文 / 收起」：居中一行，蓝色弱化，点击热区够大 */
+.nt-fold {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  margin-top: 10rpx;
+  padding: 8rpx 0;
+}
+.nt-fold-txt {
+  margin-right: 6rpx;
+  font-size: 24rpx;
+  color: #3370FF;
+}
+/* 同一个箭头旋转到新状态（v0.7.13）：展开时转 180°，不再是「换一个图标」。
+   外层套 view 是因为 app-icon 是自定义组件，外部 class 不一定能作用到它的根节点。
+   时长与 .nt-body 保持一致（280ms），改一处忘另一处由 check-notice 拦下。 */
+.nt-fold-arrow {
+  display: flex;
+  align-items: center;
+  transition: transform .28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.nt-fold-arrow.on { transform: rotate(180deg); }
+.nt-link {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-top: 16rpx;
+  padding: 16rpx 20rpx;
+  background: #F7F8FA;
+  border-radius: 14rpx;
+}
+.nt-link:active { background: #F0F5FF; }
+.nt-linktext {
+  flex: 1;
+  min-width: 0;
+  margin-left: 14rpx;
+  font-size: 26rpx;
+  color: #3370FF;
+}
+.nt-linkhint {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  color: #86909C;
+}
+.nt-foot {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-top: 16rpx;
+  padding-top: 14rpx;
+  border-top: 2rpx solid #F2F3F5;
+}
+.nt-ackinfo { flex: 1; min-width: 0; }
+.nt-acknum {
+  font-size: 23rpx;
+  color: #86909C;
+}
+.nt-acklist {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 8rpx;
+  width: 100%;
+}
+.nt-ackchip {
+  margin: 0 8rpx 8rpx 0;
+  padding: 2rpx 12rpx;
+  font-size: 22rpx;
+  color: #4E5969;
+  background: #F2F3F5;
+  border-radius: 16rpx;
+}
+.nt-ackmore {
+  margin: 0 8rpx 8rpx 0;
+  font-size: 22rpx;
+  color: #86909C;
+}
+.nt-btn {
+  padding: 0 32rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: #3370FF;
+  border-radius: 999rpx;
+}
+.nt-btn:active { background: #245BDB; }
+.nt-space { height: 40rpx; }
+/* 超管「清空全部通知」入口：红色弱化文字居中，二次确认后才执行 */
+.nt-clear {
+  margin: 8rpx 48rpx 40rpx;
+  padding: 20rpx 0;
+  text-align: center;
+  font-size: 26rpx;
+  color: #F53F3F;
+  opacity: .8;
+}
+
+/* ============ 回收站（2026-09-26 / v0.7.13 需求②） ============ */
+
+/* 卡片的外层：承担「飞向回收站」的**横向**位移，以及「堆叠」时的 sticky / 层级 / 缩放。
+   ⚠️ position: relative 不能省 —— 飞行时靠 z-index 把它抬到其它卡片之上，
+   而 z-index 对 static 元素无效；display: block 是防它被放进 flex 行里塌成一列。
+   ⚠️ z-index: 5 是给**没进堆**的卡片的：它们要盖住堆里的卡片（堆里是 1~3），
+   这样滚动时才是「后面的卡逐张压上来」，而不是从堆底下钻过去。 */
+.nt-wrap {
+  position: relative;
+  display: block;
+  z-index: 5;
+}
+/* 横向：linear（匀速） */
+.nt-fly-x { transition: transform .52s linear; }
+/* 纵向 + 缩小 + 旋转 + 淡出：ease-in（越走越快）
+   —— 横向匀速、纵向加速，两条曲线合成出来才是**弧线**，不是一条斜直线。 */
+.nt-fly-y {
+  transition: transform .52s cubic-bezier(0.55, 0, 1, 0.45), opacity .52s ease-in;
+}
+
+/* 右下角回收站入口。z-index 70 高于飞行卡片（60），卡片才会「钻进」垃圾桶后面 */
+.nt-trash {
+  position: fixed;
+  right: 32rpx;
+  bottom: calc(48rpx + env(safe-area-inset-bottom));
+  z-index: 70;
+  width: 96rpx;
+  height: 96rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #FFFFFF;
+  border-radius: 999rpx;
+  box-shadow: 0 6rpx 20rpx rgba(0,0,0,.12);
+  transition: transform .2s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+/* 卡片正飞进来时「接一下」，让落点看得见（不然用户不知道它去哪了） */
+.nt-trash.on { transform: scale(1.18); }
+.nt-trash-badge {
+  position: absolute;
+  top: -4rpx;
+  right: -4rpx;
+  min-width: 32rpx;
+  height: 32rpx;
+  padding: 0 6rpx;
+  box-sizing: border-box;
+  border-radius: 999rpx;
+  background: #F53F3F;
+  color: #FFFFFF;
+  font-size: 20rpx;
+  line-height: 32rpx;
+  text-align: center;
+}
+
+/* 回收站弹层里的已删通知 */
+.rc-wrap { padding: 8rpx 0 24rpx; }
+/* 回收站空态（v0.7.24 修「图标错位」）：
+ * <app-icon> 渲染出来是 <image class="app-icon" style="display:block">（见 components/app-icon/index.wxss），
+ * 而 text-align:center **只对行内内容生效，管不了块级子元素** —— 图标会老老实实贴在左边距上，
+ * 只有下面两行 <text>（display:block 但内部是行内文本）居中。
+ * 所以居中必须由父级用 flex 承担；全项目其它图标容器（.rc-clear / .empty / .wv-fail / .ps-ph …）
+ * 一律是 display:flex，这里补上同一套。 */
+.rc-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 80rpx 32rpx;
+  text-align: center;
+}
+.rc-empty-txt { display: block; margin-top: 16rpx; font-size: 28rpx; color: #86909C; }
+.rc-empty-sub { display: block; margin-top: 8rpx; font-size: 24rpx; color: #C9CDD4; }
+/* 回收站卡片（v0.7.14）：标题 + 单行内容，右侧常驻「恢复」 */
+.rc-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  background: #FFFFFF;
+  border: 2rpx solid #F2F3F5;
+  border-radius: 32rpx;
+  box-shadow: 0 2rpx 12rpx rgba(29,33,41,.05);
+}
+.rc-main { flex: 1; min-width: 0; }
+.rc-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1D2129;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 正文只留一行，超出省略号（回收站只做「认得出是哪条」的用途） */
+.rc-content {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  color: #86909C;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rc-restore {
+  flex-shrink: 0;
+  margin-left: 20rpx;
+  padding: 0 24rpx;
+  height: 52rpx;
+  line-height: 52rpx;
+  font-size: 24rpx;
+  color: #FFFFFF;
+  background: #3370FF;
+  border-radius: 999rpx;
+}
+
+/* ---------- 配图缩略图 + 图片查看器（v0.7.14，截图②） ---------- */
+.nt-imgs { display: flex; flex-direction: row; flex-wrap: wrap; gap: 12rpx; margin-top: 16rpx; }
+.nt-img { width: 150rpx; height: 150rpx; border-radius: 24rpx; overflow: hidden; background: #F2F3F5; }
+.nt-img-pic { width: 100%; height: 100%; display: block; }
+
+.nt-viewer { position: fixed; left: 0; top: 0; right: 0; bottom: 0; z-index: 100; }
+.nt-vbg { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.88); }
+/* 移动层：内联 style 已经写了 position:fixed + left/top/width/height，
+   .anim 才有过渡；入场第一拍不带 anim（瞬移贴到缩略图位置），第二拍才起过渡 */
+.nt-vimg { position: fixed; z-index: 101; overflow: hidden; background: #000000; border-radius: 16rpx; }
+.nt-vimg.anim { transition: left .28s cubic-bezier(.22,1,.36,1), top .28s cubic-bezier(.22,1,.36,1), width .28s cubic-bezier(.22,1,.36,1), height .28s cubic-bezier(.22,1,.36,1); }
+.nt-vimg-pic { width: 100%; height: 100%; }
+.nt-vnav {
+  position: fixed; top: 50%; transform: translateY(-50%); z-index: 102;
+  width: 72rpx; height: 72rpx; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16); color: #FFFFFF;
+  font-size: 52rpx; line-height: 72rpx; text-align: center;
+}
+.nt-vprev { left: 24rpx; }
+.nt-vnext { right: 24rpx; }
+.nt-vdots { position: fixed; bottom: 48rpx; left: 0; right: 0; z-index: 102; display: flex; justify-content: center; gap: 12rpx; }
+.nt-vdot { width: 14rpx; height: 14rpx; border-radius: 50%; background: rgba(255, 255, 255, 0.4); }
+.nt-vdot.on { background: #FFFFFF; }
+
+/* 无障碍兜底：系统开启「减少动态效果」时，高度与箭头都直接到位，不做过渡。
+   （过渡时长压到 0.01ms 而不是写 none，是为了让 transitionend / 计时逻辑不突变） */
+@media (prefers-reduced-motion: reduce) {
+  .nt-body { transition-duration: .01ms; }
+  .nt-fold-arrow { transition-duration: .01ms; }
+  /* 飞行同理：直接落到回收站，不做曲线飞行 */
+  .nt-fly-x { transition-duration: .01ms; }
+  .nt-fly-y { transition-duration: .01ms; }
+  .nt-trash { transition-duration: .01ms; }
+  /* 图片查看器：直接到位，不做放大/缩小过渡 */
+  .nt-vimg.anim { transition-duration: .01ms; }
+}
+
+/* 清空回收站（v0.7.16 需求⑤）：列表顶部的一条危险操作行 */
+.rc-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  margin-bottom: 16rpx;
+  padding: 14rpx 0;
+  font-size: 26rpx;
+  color: #E5484D;
+  border: 2rpx solid #FFD9D5;
+  border-radius: 24rpx;
+  background: #FFF3F3;
+}

@@ -1,0 +1,239 @@
+<view class="page bind page-fade">
+
+  <!-- ======== Step 1 · 班级口令 ======== -->
+  <block wx:if="{{step === 0}}">
+    <view class="bind-status" style="height:{{statusBarHeight}}px"></view>
+    <view class="bind-gap" style="height:88rpx"></view>
+
+    <view class="bind-logo">
+      <app-icon name="logo" variant="brand" size="{{96}}" />
+    </view>
+
+    <view class="bind-title">班级任务管理</view>
+    <view class="bind-sub">值日排班 · 课表 · 提醒</view>
+
+    <!-- 绑定入口被超管关闭（防爆破自动锁死或手动关闭）时给出明确指引 -->
+    <view wx:if="{{bindClosed}}" class="bind-closed">
+      班级绑定暂未开放，请联系管理员（宋艾霖）开启后重试
+    </view>
+
+    <block wx:if="{{!staffMode}}">
+      <view class="bind-form">
+        <view class="bind-label">班级口令</view>
+        <input
+          class="bind-input {{tokenError ? 'err' : ''}} {{shake ? 'shake' : ''}}"
+          type="text"
+          value="{{token}}"
+          password="{{false}}"
+          maxlength="12"
+          placeholder="班级口令或邀请码"
+          placeholder-class="bind-ph"
+          bindinput="onTokenInput"
+          confirm-type="done"
+        />
+        <view wx:if="{{tokenError}}" class="bind-err">{{tokenError}}</view>
+        <view wx:else class="bind-help">口令或邀请码由生活委员发放，也可扫邀请码自动填入</view>
+      </view>
+
+      <view
+        class="bind-primary {{token.length >= 4 && agreed && !checking ? '' : 'disabled'}}"
+        hover-class="press-dim"
+        hover-start-time="0"
+        hover-stay-time="60"
+        bindtap="onNext"
+      >
+        <text wx:if="{{!checking}}">下一步</text>
+        <view wx:else class="bind-spinner"></view>
+      </view>
+
+      <view class="bind-scan" hover-class="press-dim" hover-start-time="0" hover-stay-time="60" bindtap="onScan">
+        <app-icon name="scan" variant="brand" size="{{32}}" />
+        <text>扫描班级邀请码</text>
+      </view>
+    </block>
+
+    <!-- ======== 教职工（辅导员 / 老师）入口 ========
+         辅导员没有班级、没有学号：原有链路「口令 → 名单选人 → 学号后 4 位」三重都不适用。
+         改为管理员（超管 / 辅导员）在班级管理页现场发一个 8 位一次性绑定码，本人输入即绑定。 -->
+    <block wx:else>
+      <view class="bind-form">
+        <view class="bind-label">教职工绑定码</view>
+        <input
+          class="bind-input bind-input-code {{staffError ? 'err' : ''}} {{shake ? 'shake' : ''}}"
+          type="text"
+          value="{{staffCode}}"
+          password="{{false}}"
+          maxlength="8"
+          placeholder="8 位绑定码"
+          placeholder-class="bind-ph"
+          bindinput="onStaffInput"
+          confirm-type="done"
+        />
+        <view wx:if="{{staffError}}" class="bind-err">{{staffError}}</view>
+        <view wx:else class="bind-help">由管理员（超管 / 辅导员）在「班级管理」里生成，48 小时内有效、只能用一次</view>
+      </view>
+
+      <view
+        class="bind-primary {{staffCode.length === 8 && agreed && !staffBinding ? '' : 'disabled'}}"
+        hover-class="press-dim"
+        hover-start-time="0"
+        hover-stay-time="60"
+        bindtap="onStaffSubmit"
+      >
+        <text wx:if="{{!staffBinding}}">绑定</text>
+        <view wx:else class="bind-spinner"></view>
+      </view>
+
+      <view class="bind-scan" hover-class="press-dim" hover-start-time="0" hover-stay-time="60" bindtap="onExitStaff">
+        <text>返回学生绑定</text>
+      </view>
+    </block>
+
+    <view
+      wx:if="{{!staffMode}}"
+      class="bind-switch"
+      hover-class="press-dim"
+      hover-start-time="0"
+      hover-stay-time="60"
+      bindtap="onEnterStaff"
+    >我是老师 / 辅导员</view>
+
+    <!-- 隐私合规（2026-09-25 审核要求）：不得默认同意，必须用户主动勾选后才可使用。
+         链接用 catchtap：点协议名只看文档，不改变勾选状态 -->
+    <view class="bind-agreement">
+      <view class="agree-row" bindtap="onToggleAgree">
+        <view class="agree-box {{agreed ? 'on' : ''}}">
+          <app-icon wx:if="{{agreed}}" name="check" variant="brand" size="{{24}}" />
+        </view>
+        <text class="agree-text">已阅读并同意</text>
+        <text class="link" catchtap="onDoc" data-type="agreement">《用户协议》</text>
+        <text class="agree-text">与</text>
+        <text class="link" catchtap="onDoc" data-type="privacy">《隐私政策》</text>
+      </view>
+    </view>
+    <view style="height:{{safeBottom}}px"></view>
+  </block>
+
+  <!-- ======== Step 2 · 名单选人 ======== -->
+  <block wx:elif="{{step === 1}}">
+    <nav-bar title="选择你的身份" show-back="{{true}}" custom-back="{{true}}" bind:back="onBack" />
+
+    <view class="bind-tip">名单中共 {{roster.length}} 人，请找到你自己</view>
+
+    <view class="search-box">
+      <app-icon name="search" variant="gray" size="{{32}}" />
+      <input
+        class="search-input"
+        value="{{kw}}"
+        placeholder="搜索姓名或学号"
+        placeholder-class="bind-ph"
+        bindinput="onKw"
+      />
+    </view>
+
+    <spring-scroll id="bindMain" refreshable bindrefresh="onRefresh" class="roster-scroll" wx:if="{{!rosterLoading}}">
+      <block wx:if="{{groups.length}}">
+        <view wx:for="{{groups}}" wx:for-item="g" wx:key="tag" class="roster-group">
+          <view class="roster-group-title">{{g.title}}</view>
+          <view
+            wx:for="{{g.list}}"
+            wx:for-item="m"
+            wx:key="id"
+            class="roster-row fade-item {{picked && picked.id === m.id ? 'on' : ''}} {{m.bound ? 'bound' : ''}}"
+            style="animation-delay:{{(index > 8 ? 8 : index) * 24}}ms"
+            hover-class="tap-hover"
+            hover-start-time="0"
+            hover-stay-time="60"
+            data-id="{{m.id}}"
+            bindtap="onPick"
+          >
+            <avatar-tag name="{{m.name}}" size="{{72}}" />
+            <view class="roster-name">{{m.name}}</view>
+            <!-- 辅导员（X 组）后端返回的 studentNoMasked 为空串，这里整行不渲染 -->
+            <view wx:if="{{m.studentNoMasked}}" class="roster-no">{{m.studentNoMasked}}</view>
+            <block wx:if="{{picked && picked.id === m.id}}">
+              <app-icon name="check" variant="brand" size="{{40}}" />
+            </block>
+            <block wx:elif="{{m.bound}}">
+              <view class="roster-tag">已绑定</view>
+            </block>
+            <!-- X = 教职工（辅导员），不显示 A/B 组徽标 -->
+            <view wx:elif="{{m.groupTag === 'X'}}" class="roster-badge teacher">教职工</view>
+            <view wx:else class="roster-badge {{m.groupTag === 'A' ? 'ga' : 'gb'}}">{{m.groupTag}} 组</view>
+          </view>
+        </view>
+      </block>
+      <empty-state
+        wx:else
+        icon="search-empty"
+        title="没找到这位同学"
+        desc="试试只输入学号后四位，或联系生活委员补充名单"
+        padding="{{120}}"
+      />
+    </spring-scroll>
+
+    <skeleton wx:else type="list" rows="{{5}}" />
+
+    <view class="pick-bar {{picked ? 'up' : ''}}" style="padding-bottom:{{safeBottom}}px">
+      <block wx:if="{{picked}}">
+        <avatar-tag name="{{picked.name}}" size="{{56}}" />
+        <text class="pick-name">{{picked.name}}</text>
+      </block>
+      <text wx:else class="pick-name placeholder">请选择</text>
+      <view class="pick-btn {{picked ? '' : 'disabled'}}" hover-class="press-dim" hover-start-time="0" hover-stay-time="60" bindtap="onConfirmPerson">就是我</view>
+    </view>
+  </block>
+
+  <!-- ======== Step 3 · 学号后四位 ======== -->
+  <block wx:else>
+    <nav-bar title="验证身份" show-back="{{true}}" custom-back="{{true}}" bind:back="onBack" />
+
+    <view class="picked-card">
+      <avatar-tag name="{{picked.name}}" size="{{80}}" />
+      <view class="picked-info">
+        <view class="picked-name">{{picked.name}}</view>
+        <view class="picked-no">学号 {{picked.studentNoMasked}}</view>
+      </view>
+      <view class="picked-change" hover-class="press-dim" hover-start-time="0" hover-stay-time="60" bindtap="onChangePerson">换一个</view>
+    </view>
+
+    <view class="code-title">请输入你的学号后 4 位</view>
+
+    <view class="code-wrap {{codeError ? 'err' : ''}} {{shake ? 'shake' : ''}}">
+      <view
+        wx:for="{{[0,1,2,3]}}"
+        wx:key="*this"
+        class="code-cell {{code.length === index ? 'active' : ''}}"
+      >{{codeArr[index] || ''}}</view>
+      <input
+        class="code-input"
+        type="number"
+        value="{{code}}"
+        maxlength="4"
+        focus="{{codeFocus}}"
+        bindinput="onCodeInput"
+      />
+    </view>
+
+    <view wx:if="{{codeError}}" class="code-err">{{codeError}}</view>
+
+    <view class="bind-primary {{code.length === 4 && !binding ? '' : 'disabled'}}" hover-class="press-dim" hover-start-time="0" hover-stay-time="60" bindtap="onBind">
+      <text wx:if="{{!binding}}">完成绑定</text>
+      <view wx:else class="bind-spinner"></view>
+    </view>
+
+    <view class="bind-help center">学号仅用于校验身份，不会展示给他人</view>
+    <view style="height:{{safeBottom}}px"></view>
+  </block>
+
+  <dialog
+    show="{{locked}}"
+    icon="warn"
+    icon-variant="orange"
+    title="验证次数过多"
+    content="为避免冒名绑定，请稍后再试或联系生活委员手动绑定"
+    confirm-text="我知道了"
+    show-cancel="{{false}}"
+    bind:confirm="onLockedKnow"
+  />
+</view>

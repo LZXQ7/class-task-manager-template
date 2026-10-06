@@ -1,0 +1,14 @@
+{
+  "navigationStyle": "custom",
+  "backgroundColor": "#F5F6F8",
+  "initialRenderingCache": "static",
+  "usingComponents": {
+    "app-icon": "../../components/app-icon/index",
+    "nav-bar": "../../components/nav-bar/index",
+    "avatar-tag": "../../components/avatar-tag/index",
+    "bottom-sheet": "../../components/bottom-sheet/index",
+    "empty-state": "../../components/empty-state/index",
+    "notice-bar": "../../components/notice-bar/index",
+    "spring-scroll": "../../components/spring-scroll/index"
+  }
+}

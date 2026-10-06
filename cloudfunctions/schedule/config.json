@@ -1,0 +1,7 @@
+{
+  "name": "schedule",
+  "timeout": 30,
+  "permissions": {
+    "openapi": ["subscribeMessage.send"]
+  }
+}

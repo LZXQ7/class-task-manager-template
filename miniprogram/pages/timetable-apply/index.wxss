@@ -1,0 +1,57 @@
+.ta { min-height: 100vh; background: #F5F6F8; }
+.ta-nav-right { display: flex; align-items: center; }
+.ta-nav-btn { font-size: 30rpx; color: #3370FF; padding: 0 16rpx; }
+.ta-loading { text-align: center; font-size: 28rpx; color: #86909C; padding: 120rpx 0; }
+.ta-list { padding: 24rpx 32rpx 60rpx; }
+.ta-card { background: #FFFFFF; border-radius: 32rpx; padding: 28rpx 28rpx 20rpx; margin-bottom: 24rpx; box-shadow: 0 8rpx 30rpx rgba(29,33,41,0.06); }
+.ta-card-head { display: flex; justify-content: space-between; align-items: center; }
+.ta-class { font-size: 32rpx; font-weight: 600; color: #1D2129; }
+.ta-status { font-size: 24rpx; color: #3370FF; background: #F0F5FF; border-radius: 12rpx; padding: 4rpx 16rpx; }
+/* 组别徽标（2026-10-05）：A/B 组是两份独立申请，用橙色区分「这份属于哪组」 */
+.ta-status.grp { color: #D25F00; background: #FFF7E8; }
+.ta-row { display: flex; font-size: 26rpx; margin-top: 16rpx; }
+.ta-row .k { color: #86909C; width: 130rpx; flex-shrink: 0; }
+.ta-row .v { color: #1D2129; flex: 1; }
+.ta-sum { font-size: 24rpx; color: #4E5969; margin-top: 16rpx; }
+.ta-sum-w { color: #D25F00; }
+.ta-actions { display: flex; align-items: center; margin-top: 24rpx; }
+.ta-btn { font-size: 28rpx; border-radius: 20rpx; padding: 16rpx 0; text-align: center; flex: 1; margin-left: 16rpx; }
+.ta-btn:first-child { margin-left: 0; }
+.ta-btn.ghost { background: #F2F3F5; color: #4E5969; }
+.ta-btn.ghost.danger { color: #F53F3F; }
+.ta-btn.primary { background: #3370FF; color: #FFFFFF; }
+.ta-btn.off { opacity: 0.5; }
+
+/* 复用 timetable 页预览样式 */
+.ds-form { padding: 8rpx 32rpx 48rpx; }
+.im-stat { display: flex; align-items: baseline; font-size: 28rpx; color: #4E5969; }
+.im-list { height: 420rpx; }
+.im-empty { font-size: 26rpx; color: #86909C; text-align: center; padding: 60rpx 0; }
+.im-num { font-size: 44rpx; font-weight: 700; color: #1D2129; margin: 0 6rpx; }
+.im-group { margin-top: 16rpx; font-size: 26rpx; color: #4E5969; }
+.im-group-v { color: #3370FF; font-weight: 600; }
+.im-dot { margin: 0 16rpx; color: #C9CDD4; }
+.im-warn { margin-top: 24rpx; background: #FFF7E8; border-radius: 20rpx; padding: 20rpx 24rpx; }
+.im-warn-t { font-size: 26rpx; color: #D25F00; font-weight: 600; }
+.im-warn-item { font-size: 24rpx; color: #8A5A00; margin-top: 10rpx; line-height: 34rpx; }
+.im-list-t { font-size: 26rpx; color: #86909C; margin: 28rpx 0 12rpx; }
+.im-list { max-height: 520rpx; }
+.im-course { display: flex; justify-content: space-between; align-items: center; padding: 16rpx 0; border-bottom: 2rpx solid #F2F3F5; }
+.im-c-name { font-size: 28rpx; color: #1D2129; }
+.im-c-teacher { font-size: 24rpx; color: #86909C; }
+/* 底部操作按钮统一规范（2026-10-05 对齐全局 .btn：高度 96rpx / 圆角 --r-md / 字号 32rpx / 字重 600；
+   .f-actions 为 flex 行 + gap，.f-save 主按钮与 .im-cancel 次按钮等宽。以后加按钮直接套。） */
+.f-actions { display: flex; gap: 20rpx; align-items: stretch; margin-top: 28rpx; }
+.f-save, .im-cancel {
+  flex: 1;
+  height: 96rpx;
+  border-radius: var(--r-md);
+  font-size: 32rpx;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.f-save { background: var(--brand); color: #FFFFFF; }
+.f-save.off { background: var(--brand-disable); }
+.im-cancel { background: #F2F3F5; color: #4E5964; font-weight: 500; }
